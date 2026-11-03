@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Cloud, CheckCircle2, LogOut, RefreshCw } from "lucide-react";
 import { cloudClient } from "./cloud";
-import type { LearningStore } from "./useLearningState";
+import { syncLabel, type LearningStore } from "./useLearningState";
 export function CloudAccount({ store }: { store: LearningStore }) {
   const [mode, M] = useState<"signin" | "signup" | "reset">("signin");
   const [email, E] = useState("");
@@ -9,15 +9,6 @@ export function CloudAccount({ store }: { store: LearningStore }) {
   const [busy, B] = useState(false);
   const [message, T] = useState("");
   const [passwordReset, PR] = useState(false);
-  const labels = {
-    guest: "Saved on this device",
-    loading: "Loading account",
-    saved: "Saved to your account",
-    pending: "Changes waiting to save",
-    saving: "Saving to your account",
-    error: "Account save needs attention",
-    conflict: "Two saved copies need review",
-  };
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!cloudClient) return;
@@ -59,7 +50,11 @@ export function CloudAccount({ store }: { store: LearningStore }) {
     } catch (e) {
       T(
         e instanceof Error
-          ? e.message
+          ? e.message === "Invalid login credentials"
+            ? "That email and password didn’t match. Try again or use Forgot password."
+            : e.message === "Email not confirmed"
+              ? "Open the confirmation link in your email, then sign in here."
+              : e.message
           : "Could not complete that request. Try again.",
       );
     } finally {
@@ -89,7 +84,7 @@ export function CloudAccount({ store }: { store: LearningStore }) {
             <CheckCircle2 size={19} />
             <div>
               <b>{store.user.email}</b>
-              <small>{labels[store.status]}</small>
+              <small>{syncLabel(store.status, true, store.error)}</small>
             </div>
           </div>
           {store.status === "conflict" ? (
@@ -148,9 +143,9 @@ export function CloudAccount({ store }: { store: LearningStore }) {
             <details>
               <summary>Bring in this browser’s earlier progress</summary>
               <p>
-                This replaces the progress in the current account with the work
-                you did here while signed out. Export a backup first if you want
-                to keep both.
+                This replaces this account’s progress with the work you did in
+                this browser while signed out. Export a backup first to keep the
+                current account copy.
               </p>
               <button
                 className="button secondary"
@@ -233,6 +228,11 @@ export function CloudAccount({ store }: { store: LearningStore }) {
                 />
               </label>
             )}
+            {mode === "signup" && (
+              <p className="muted small-text">
+                Use at least 12 characters for your password.
+              </p>
+            )}
             <button className="button primary" disabled={busy}>
               {busy
                 ? "Please wait..."
@@ -256,8 +256,8 @@ export function CloudAccount({ store }: { store: LearningStore }) {
             )}
           </form>
           <p className="muted small-text">
-            Your saved records are private to your account. The lessons and
-            website are public.
+            Your progress and notes are private to your account. If this is a
+            new account, your work in this browser comes with you.
           </p>
         </>
       )}

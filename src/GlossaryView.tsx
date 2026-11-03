@@ -39,6 +39,16 @@ export function Glossary({
   useEffect(() => {
     if (selected && selected.id !== selectedId) onSelect(selected.id);
   }, [selected?.id, selectedId]);
+  useEffect(() => {
+    const box = list.current;
+    const active = box?.querySelector<HTMLElement>("button.selected");
+    if (box && active) {
+      const item = active.getBoundingClientRect(),
+        bounds = box.getBoundingClientRect();
+      if (item.top < bounds.top || item.bottom > bounds.bottom)
+        box.scrollTop += item.top - bounds.top;
+    }
+  }, [selected?.id]);
   function choose(id: string) {
     Q("");
     C("All");

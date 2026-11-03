@@ -28,9 +28,7 @@ test("learning, incident, terminal, story, planning and backup journeys", async 
     })
     .click();
   await page.getByRole("button", { name: "Check understanding" }).click();
-  await expect(
-    page.getByText("Correct. Your progress is saved."),
-  ).toBeVisible();
+  await expect(page.getByText("Correct. Lesson completed.")).toBeVisible();
   await page.waitForTimeout(300);
   await page.reload();
   await nav(page, "Dashboard");
@@ -132,7 +130,7 @@ test("learning, incident, terminal, story, planning and backup journeys", async 
       .click();
   }
   await expect(
-    page.getByText("ASSESSMENT SAVED", { exact: true }),
+    page.getByText("Practice complete", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Build your study plan" }).click();
   await page.getByRole("checkbox").first().check();
@@ -245,9 +243,7 @@ test("community context is attributed, protocol lessons work, and prep tasks per
   await page
     .getByRole("button", { name: "Check understanding", exact: true })
     .click();
-  await expect(
-    page.getByText("Correct. Your progress is saved."),
-  ).toBeVisible();
+  await expect(page.getByText("Correct. Lesson completed.")).toBeVisible();
   await nav(page, "Career Readiness");
   const task = page.getByRole("checkbox", {
     name: "Test microphone, webcam, connection, and backup communication plan",

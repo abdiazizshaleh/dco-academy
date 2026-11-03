@@ -1,3 +1,4 @@
+import type { HardwareProgress } from "./store";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -362,18 +363,34 @@ const identify = [
     why: "Match the controller fault to the exact bay and serial before a replacement. Removing a healthy drive can exceed the array’s fault tolerance.",
   },
 ];
-export function Server({ onAssess }: { onAssess?: (score: number) => void }) {
-  const [part, P] = useState("DIMM");
-  const [quiz, Q] = useState<number | null>(null);
-  const [result, R] = useState<boolean | null>(null);
+export function Server({
+  onAssess,
+  state,
+  onChange,
+}: {
+  onAssess?: (score: number) => void;
+  state?: HardwareProgress;
+  onChange?: (value: HardwareProgress) => void;
+}) {
+  const [local, L] = useState<HardwareProgress>({
+    part: "DIMM",
+    quiz: null,
+    result: null,
+  });
+  const value = state || local;
+  const { part, quiz, result } = value;
+  function update(patch: Partial<HardwareProgress>) {
+    const next = { ...value, ...patch };
+    if (onChange) onChange(next);
+    else L(next);
+  }
   const chosen = parts.find((p) => p.key === part)!;
   function choose(key: string) {
-    P(key);
     if (quiz !== null && result === null) {
       const pass = key === identify[quiz].answer;
-      R(pass);
+      update({ part: key, result: pass });
       onAssess?.(pass ? 100 : 0);
-    }
+    } else update({ part: key });
   }
   return (
     <section className="hardware-viewer">
@@ -385,8 +402,10 @@ export function Server({ onAssess }: { onAssess?: (score: number) => void }) {
         <button
           className="button secondary"
           onClick={() => {
-            Q(quiz === null ? 0 : (quiz + 1) % identify.length);
-            R(null);
+            update({
+              quiz: quiz === null ? 0 : (quiz + 1) % identify.length,
+              result: null,
+            });
           }}
         >
           {quiz === null ? "Test component identification" : "Next question"}
@@ -403,11 +422,18 @@ export function Server({ onAssess }: { onAssess?: (score: number) => void }) {
               {identify[quiz].why}
             </div>
           )}
+          {result === false && (
+            <button
+              className="text-button"
+              onClick={() => update({ result: null })}
+            >
+              Try this question again
+            </button>
+          )}
           <button
             className="text-button"
             onClick={() => {
-              Q(null);
-              R(null);
+              update({ quiz: null, result: null });
             }}
           >
             Back to exploring

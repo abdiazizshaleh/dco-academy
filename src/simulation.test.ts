@@ -92,7 +92,7 @@ it("rejects invalid backups and accepts round trips", () => {
 });
 it("story coaching asks for genuine evidence", () => {
   expect(storyFeedback(makeStory())).toContain(
-    "What supports the result? Add a real observation or verified measurement.",
+    "What did you see or measure that showed the result?",
   );
 });
 it("curriculum answer indexes and source mappings are valid", () => {

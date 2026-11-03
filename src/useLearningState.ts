@@ -1,13 +1,34 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type SetStateAction } from "react";
 import { get, set } from "idb-keyval";
 import type { User } from "@supabase/supabase-js";
-import { initial, readState, writeState, type State } from "./store";
+import {
+  initial,
+  hasLearningProgress,
+  stagePending,
+  readPending,
+  clearPending,
+  parseImport,
+  readState,
+  writeState,
+  type State,
+} from "./store";
 import { cloudClient, loadCloud, saveCloud, SaveConflict } from "./cloud";
 type Cache = { state: State; revision: number; dirty: boolean };
 export type SyncStatus =
   "guest" | "loading" | "saved" | "pending" | "saving" | "error" | "conflict";
+export function syncLabel(status: SyncStatus, account: boolean, error = "") {
+  if (error && status !== "conflict") return "Saving needs attention";
+  if (status === "loading") return "Opening saved progress";
+  if (status === "conflict") return "Review saved copies";
+  if (status === "error") return "Saving needs attention";
+  if (status === "saving")
+    return account ? "Saving to your account" : "Saving on this device";
+  if (status === "pending")
+    return account ? "Waiting to save to account" : "Saving on this device";
+  return account ? "Saved to your account" : "Saved on this device";
+}
 export function useLearningState() {
-  const [state, setState] = useState<State>(initial);
+  const [state, setReactState] = useState<State>(initial);
   const [ready, setReady] = useState(false);
   const [user, U] = useState<User | null>(null);
   const [status, Status] = useState<SyncStatus>("loading");
@@ -15,6 +36,13 @@ export function useLearningState() {
   const [hasGuest, HG] = useState(false);
   const scope = useRef({ id: null as string | null, epoch: 0 });
   const current = useRef(state);
+  const activeUser = useRef<User | null>(null);
+  const localPending = useRef(0);
+  const recoveryReady = useRef(false);
+  const statusRef = useRef<SyncStatus>("loading");
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
   const revision = useRef(0);
   const dirty = useRef(false);
   const baseline = useRef("");
@@ -24,17 +52,45 @@ export function useLearningState() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queue = useRef(Promise.resolve());
   const cacheKey = (id: string) => "dco-academy-account-" + id;
+  function setState(update: SetStateAction<State>) {
+    const next =
+      typeof update === "function" ? update(current.current) : update;
+    const id = scope.current.id;
+    if (id) dirty.current = true;
+    recoveryReady.current =
+      stagePending(
+        id ? cacheKey(id) : "dco-academy-v1",
+        id ? { state: next, revision: revision.current, dirty: true } : next,
+      ) !== null;
+    current.current = next;
+    setReactState(next);
+  }
   function cache(id: string, value: Cache) {
+    recoveryReady.current = stagePending(cacheKey(id), value) !== null;
+    localPending.current++;
     queue.current = queue.current
       .catch(() => {})
-      .then(() => set(cacheKey(id), value));
+      .then(() => set(cacheKey(id), value))
+      .then(() => clearPending(cacheKey(id), value))
+      .finally(() => {
+        localPending.current--;
+      });
     return queue.current;
   }
   function cancel() {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
   }
-  async function saveNow() {
+  const savingTask = useRef<Promise<boolean | undefined> | null>(null);
+  function saveNow(): Promise<boolean | undefined> {
+    if (savingTask.current) return savingTask.current;
+    const task = persistNow().finally(() => {
+      if (savingTask.current === task) savingTask.current = null;
+    });
+    savingTask.current = task;
+    return task;
+  }
+  async function persistNow() {
     const { id, epoch } = scope.current;
     if (
       !id ||
@@ -80,6 +136,7 @@ export function useLearningState() {
       if (success && dirty.current && scope.current.epoch === epoch)
         timer.current = setTimeout(() => void saveNow(), 1000);
     }
+    return success;
   }
   async function activate(nextUser: User | null) {
     cancel();
@@ -87,6 +144,7 @@ export function useLearningState() {
     scope.current.id = nextUser?.id || null;
     setReady(false);
     U(nextUser);
+    activeUser.current = nextUser;
     Status("loading");
     E("");
     writable.current = false;
@@ -97,17 +155,14 @@ export function useLearningState() {
       await queue.current.catch(() => {});
       const guest = await readState();
       if (scope.current.epoch !== epoch) return;
-      HG(
-        Boolean(
-          guest.completed.length ||
-          guest.stories.length ||
-          guest.attempts.length ||
-          Object.keys(guest.notes).length,
-        ),
-      );
+      const guestProgress = hasLearningProgress(guest);
+      HG(guestProgress);
       let value = guest;
       if (nextUser) {
-        const local = await get<Cache>(cacheKey(nextUser.id));
+        const pending = readPending<Cache>(cacheKey(nextUser.id));
+        const local = pending
+          ? { ...pending, state: parseImport(JSON.stringify(pending.state)) }
+          : await get<Cache>(cacheKey(nextUser.id));
         if (scope.current.epoch !== epoch) return;
         let remote;
         try {
@@ -137,9 +192,11 @@ export function useLearningState() {
               );
             } else Status("pending");
           } else {
-            value = remote?.state || initial;
+            const bringGuest = !remote && !local && guestProgress;
+            value = remote?.state || (bringGuest ? guest : initial);
             revision.current = remote?.revision || 0;
-            Status("saved");
+            dirty.current = bringGuest;
+            Status(bringGuest ? "pending" : "saved");
           }
           await cache(nextUser.id, {
             state: value,
@@ -151,7 +208,7 @@ export function useLearningState() {
       if (scope.current.epoch !== epoch) return;
       current.current = value;
       baseline.current = JSON.stringify(value);
-      setState(value);
+      setReactState(value);
       setReady(true);
       if (nextUser && dirty.current && !conflict.current && writable.current)
         timer.current = setTimeout(() => void saveNow(), 1000);
@@ -201,7 +258,6 @@ export function useLearningState() {
     const json = JSON.stringify(state);
     if (json === baseline.current) return;
     baseline.current = json;
-    current.current = state;
     const { id } = scope.current;
     if (id) {
       dirty.current = true;
@@ -219,13 +275,27 @@ export function useLearningState() {
           timer.current = setTimeout(() => void saveNow(), 1200);
       }
     } else {
+      const epoch = scope.current.epoch;
+      localPending.current++;
+      Status("saving");
       queue.current = queue.current
         .catch(() => {})
         .then(() => writeState(state))
-        .then(() => E(""))
-        .catch(() =>
-          E("Could not save on this device. Export a backup before leaving."),
-        );
+        .then(() => {
+          if (scope.current.epoch === epoch) {
+            E("");
+            Status("guest");
+          }
+        })
+        .catch(() => {
+          if (scope.current.epoch === epoch) {
+            E("Could not save on this device. Export a backup before leaving.");
+            Status("error");
+          }
+        })
+        .finally(() => {
+          localPending.current--;
+        });
     }
   }, [state, ready]);
   async function resolve(useRemote: boolean) {
@@ -243,7 +313,7 @@ export function useLearningState() {
         dirty.current = false;
         current.current = value;
         baseline.current = JSON.stringify(value);
-        setState(value);
+        setReactState(value);
         await cache(id, {
           state: value,
           revision: revision.current,
@@ -265,8 +335,58 @@ export function useLearningState() {
     const guest = await readState();
     setState({ ...guest });
   }
+  useEffect(() => {
+    const beforeLeave = (event: BeforeUnloadEvent) => {
+      if (localPending.current > 0 && !recoveryReady.current) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    const online = () => {
+      if (activeUser.current && !saving.current && !conflict.current)
+        void activate(activeUser.current);
+    };
+    const focus = async () => {
+      const { id, epoch } = scope.current;
+      if (
+        !id ||
+        saving.current ||
+        dirty.current ||
+        statusRef.current !== "saved"
+      )
+        return;
+      try {
+        const remote = await loadCloud(id);
+        if (
+          scope.current.epoch !== epoch ||
+          saving.current ||
+          dirty.current ||
+          !remote ||
+          remote.revision === revision.current
+        )
+          return;
+        revision.current = remote.revision;
+        current.current = remote.state;
+        baseline.current = JSON.stringify(remote.state);
+        setReactState(remote.state);
+        await cache(id, { ...remote, dirty: false });
+      } catch {
+        /* Keep the last saved copy available when a background refresh fails. */
+      }
+    };
+    window.addEventListener("beforeunload", beforeLeave);
+    window.addEventListener("online", online);
+    window.addEventListener("focus", focus);
+    return () => {
+      window.removeEventListener("beforeunload", beforeLeave);
+      window.removeEventListener("online", online);
+      window.removeEventListener("focus", focus);
+    };
+  }, []);
   async function signOut() {
     cancel();
+    const saved = await saveNow();
+    if (saved && dirty.current) await saveNow();
     await queue.current.catch(() => {});
     const { error } = await cloudClient!.auth.signOut({ scope: "local" });
     if (error) throw error;

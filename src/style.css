@@ -4572,3 +4572,11 @@ footer span:first-child {
     border-color: #c48c5d80;
   }
 }
+
+.status-dot.status-warning {
+  background: var(--accent);
+}
+
+.two-cards {
+  align-items: start;
+}
