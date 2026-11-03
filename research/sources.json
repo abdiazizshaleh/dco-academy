@@ -1,0 +1,182 @@
+[
+  {
+    "id": "aws-dct",
+    "title": "Data Center Technician, Job ID 10589512",
+    "publisher": "Amazon Jobs",
+    "url": "https://www.amazon.jobs/en/jobs/10589512/data-center-technician",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "Role-specific hardware/network duties; requirements vary by requisition."
+  },
+  {
+    "id": "aws-dceo",
+    "title": "Data Center Engineering Operations Technician, Job ID 10377504",
+    "publisher": "Amazon Jobs",
+    "url": "https://amazon.jobs/en/jobs/10377504/data-center-engineering-operations-technician",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "Facilities electrical/mechanical scope, distinct from DCO IT break/fix."
+  },
+  {
+    "id": "aws-lp",
+    "title": "Leadership Principles",
+    "publisher": "Amazon Jobs",
+    "url": "https://amazon.jobs/content/en/our-workplace/leadership-principles",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "All 16 current principle names; Academy examples are interpretations."
+  },
+  {
+    "id": "aws-interview",
+    "title": "Interview loop",
+    "publisher": "Amazon Jobs",
+    "url": "https://amazon.jobs/content/en/how-we-hire/interview-loop",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "Behavioral preparation and STAR; no universal percentage or duration."
+  },
+  {
+    "id": "aws-interview-faq",
+    "title": "FAQ: Interview Prep",
+    "publisher": "Amazon Jobs",
+    "url": "https://amazon.jobs/content/en/faq/interview-prep",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "Starting point for candidate preparation; confirm details with recruiter."
+  },
+  {
+    "id": "aws-regions",
+    "title": "AWS Regions and Availability Zones",
+    "publisher": "AWS Documentation",
+    "url": "https://docs.aws.amazon.com/global-infrastructure/latest/regions/aws-regions-availability-zones.html",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "Region/AZ/data-center distinction and fault isolation."
+  },
+  {
+    "id": "intel-ecc",
+    "title": "Troubleshooting Memory ECC Correctable Errors on Intel Server System",
+    "publisher": "Intel",
+    "url": "https://www.intel.com/content/www/us/en/support/articles/000038234/server-products.html",
+    "type": "vendor-documented",
+    "verified": "2026-11-02",
+    "applicability": "ECC diagnosis example; thresholds and service steps are platform-specific."
+  },
+  {
+    "id": "dell-raid",
+    "title": "PowerEdge: What are the different RAID levels and their specifications",
+    "publisher": "Dell Technologies",
+    "url": "https://www.dell.com/support/kbdoc/en-us/000128635/dell-servers-what-are-the-raid-levels-and-their-specifications",
+    "type": "vendor-documented",
+    "verified": "2026-11-02",
+    "applicability": "RAID 0/1/5/6/10, failure tolerance, and backup distinction."
+  },
+  {
+    "id": "fluke-fiber",
+    "title": "Fiber Optic Testers and Test Equipment Guide",
+    "publisher": "Fluke Networks",
+    "url": "https://www.flukenetworks.com/expertise/learn-about/fiber-testing",
+    "type": "vendor-documented",
+    "verified": "2026-11-02",
+    "applicability": "Fiber loss, polarity, inspection, certification, and diagnostic tools."
+  },
+  {
+    "id": "fluke-clean",
+    "title": "Fiber Inspection and Cleaning",
+    "publisher": "Fluke Networks",
+    "url": "https://www.flukenetworks.com/products/installation-and-test/fiber-inspection-and-cleaning",
+    "type": "vendor-documented",
+    "verified": "2026-11-02",
+    "applicability": "Inspect before connection; contamination can degrade links."
+  },
+  {
+    "id": "cisco-optics",
+    "title": "Cisco SFP and SFP+ Transceiver Module Installation Notes",
+    "publisher": "Cisco",
+    "url": "https://www.cisco.com/c/en/us/td/docs/interfaces_modules/transceiver_modules/installation/note/78_15160.pdf",
+    "type": "vendor-documented",
+    "verified": "2026-11-02",
+    "applicability": "Optics/media compatibility, electrical/optical limits, and laser safety."
+  },
+  {
+    "id": "linux-link",
+    "title": "ip-link(8) Linux manual page",
+    "publisher": "iproute2 / man7.org",
+    "url": "https://www.man7.org/linux/man-pages/man8/ip-link.8.html",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "Link configuration and interface state; no proof of application health."
+  },
+  {
+    "id": "linux-route",
+    "title": "ip-route(8) Linux manual page",
+    "publisher": "iproute2 / man7.org",
+    "url": "https://man7.org/linux/man-pages/man8/ip-route.8.html",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "Routing-table inspection and route decisions."
+  },
+  {
+    "id": "linux-systemctl",
+    "title": "systemctl(1) Linux manual page",
+    "publisher": "systemd / man7.org",
+    "url": "https://man7.org/linux/man-pages/man1/systemctl.1.html",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "Service state and service-manager operations."
+  },
+  {
+    "id": "linux-journal",
+    "title": "journalctl(1) Linux manual page",
+    "publisher": "systemd / man7.org",
+    "url": "https://man7.org/linux/man-pages/man1/journalctl.1.html",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "Querying systemd journal evidence."
+  },
+  {
+    "id": "reddit-guide",
+    "title": "AWS Data Center Technician Prep | The Complete Guide",
+    "publisher": "Reddit r/datacenter, user-supplied post and comments",
+    "url": "https://www.reddit.com/r/datacenter/comments/1szr3ds/aws_data_center_technician_prep_the_complete/",
+    "type": "community-reported",
+    "verified": "2026-11-02",
+    "applicability": "Curriculum seed only. Interview splits, duration, shifts, and outcomes are anecdotal. Supplied JSON reviewed, not independently authenticated."
+  },
+  {
+    "id": "github-prep",
+    "title": "AWS DCO Interview Prep - community study repository",
+    "publisher": "dco-study-guide on GitHub",
+    "url": "https://github.com/dco-study-guide/aws-dco-interview-prep",
+    "type": "community-reported",
+    "verified": "2026-11-02",
+    "applicability": "Reviewed README and six study documents. Useful topic checklist, not official hiring guidance. Behavioral percentages are unverified; sample STAR results are not learner accomplishments. Reversible changes still require authorization. Fiber jacket color and a single power reading do not establish compatibility or health."
+  },
+  {
+    "id": "rfc-tcp",
+    "title": "RFC 9293 - Transmission Control Protocol",
+    "publisher": "IETF / RFC Editor",
+    "url": "https://www.rfc-editor.org/rfc/rfc9293.html",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "Transport behavior and TCP connection establishment; does not guarantee application success."
+  },
+  {
+    "id": "rfc-dhcp",
+    "title": "RFC 2131 - Dynamic Host Configuration Protocol",
+    "publisher": "IETF / RFC Editor",
+    "url": "https://www.rfc-editor.org/rfc/rfc2131.html",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "DHCPv4 initial allocation, leases, relays, and client states; renewal differs from initial DORA."
+  },
+  {
+    "id": "rfc-dns",
+    "title": "RFC 7766 - DNS Transport over TCP",
+    "publisher": "IETF / RFC Editor",
+    "url": "https://www.rfc-editor.org/rfc/rfc7766.html",
+    "type": "official",
+    "verified": "2026-11-02",
+    "applicability": "DNS TCP support, truncation fallback, and transport-specific failure diagnosis."
+  }
+]
