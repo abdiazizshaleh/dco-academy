@@ -178,5 +178,77 @@
     "type": "official",
     "verified": "2026-11-02",
     "applicability": "DNS TCP support, truncation fallback, and transport-specific failure diagnosis."
+  },
+  {
+    "id": "intel-architecture",
+    "title": "Intel 64 and IA-32 Architectures Software Developer Manuals",
+    "publisher": "Intel",
+    "url": "https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html",
+    "type": "vendor-documented",
+    "verified": "2026-11-03",
+    "applicability": "Processor architecture background; not a server replacement procedure."
+  },
+  {
+    "id": "dell-r650",
+    "title": "PowerEdge R650 documentation",
+    "publisher": "Dell Technologies",
+    "url": "https://www.dell.com/support/home/en-us/product-support/product/poweredge-r650/docs",
+    "type": "vendor-documented",
+    "verified": "2026-11-03",
+    "applicability": "A concrete example of platform-specific server specifications and service documentation."
+  },
+  {
+    "id": "rfc-arp",
+    "title": "RFC 826 - Ethernet Address Resolution Protocol",
+    "publisher": "RFC Editor",
+    "url": "https://www.rfc-editor.org/rfc/rfc826.html",
+    "type": "official",
+    "verified": "2026-11-03",
+    "applicability": "ARP local-link protocol and link-address resolution."
+  },
+  {
+    "id": "rfc-cidr",
+    "title": "RFC 4632 - Classless Inter-domain Routing",
+    "publisher": "IETF / RFC Editor",
+    "url": "https://www.rfc-editor.org/rfc/rfc4632.html",
+    "type": "official",
+    "verified": "2026-11-03",
+    "applicability": "Prefix notation and classless routing background."
+  },
+  {
+    "id": "bash-manual",
+    "title": "Bash Reference Manual",
+    "publisher": "GNU Project",
+    "url": "https://www.gnu.org/software/bash/manual/bash.html",
+    "type": "official",
+    "verified": "2026-11-03",
+    "applicability": "Shell pipelines, redirection, quoting, and exit status. The academy implements a documented subset."
+  },
+  {
+    "id": "coreutils-manual",
+    "title": "GNU Coreutils Manual",
+    "publisher": "GNU Project",
+    "url": "https://www.gnu.org/software/coreutils/manual/coreutils.html",
+    "type": "official",
+    "verified": "2026-11-03",
+    "applicability": "File, directory, text, disk-usage, and permission command behavior."
+  },
+  {
+    "id": "linux-ping",
+    "title": "ping(8) Linux manual page",
+    "publisher": "iputils / man7.org",
+    "url": "https://man7.org/linux/man-pages/man8/ping.8.html",
+    "type": "official",
+    "verified": "2026-11-03",
+    "applicability": "ICMP echo, count option, output, and exit status."
+  },
+  {
+    "id": "rfc-udp",
+    "title": "RFC 768 - User Datagram Protocol",
+    "publisher": "RFC Editor",
+    "url": "https://www.rfc-editor.org/info/rfc768/",
+    "type": "official",
+    "verified": "2026-11-03",
+    "applicability": "Base UDP datagram semantics. Read the linked updates for extensions; reliability and application behavior remain separate concerns."
   }
 ]
