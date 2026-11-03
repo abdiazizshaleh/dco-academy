@@ -144,3 +144,5 @@ Unfinished exams, per-question behavioral and technical interview drafts, lesson
 Interface text now distinguishes device saves, pending account saves, errors, and conflicts. Empty searches explain how to recover. Hardware questions can be retried, glossary deep links reveal the selected term, and instructions throughout the planner, stories, assessments, and career preparation use plain language.
 
 Validation: 43 unit tests, 11 learner browser journeys, and two account-saving browser journeys. The walkthrough covers all 14 navigation pages, every lesson, mobile layouts in both themes, recovery after immediate reload, account conflicts/offline work, new-account carryover, final edits during sign-out, and JSON backup round trips.
+
+New-account carryover also recognizes a changed plan start date, theme preference, standalone review/interview records, and per-lab terminal sessions. The plan-start-only case was reproduced and verified through real sign-in using temporary accounts.

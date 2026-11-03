@@ -134,7 +134,12 @@ export function hasLearningProgress(s: State) {
     s.planner.done.length ||
     s.planner.target ||
     s.planner.hours !== 1 ||
-    s.planner.days !== 14,
+    s.planner.days !== 14 ||
+    s.planner.start !== initial.planner.start ||
+    s.theme !== initial.theme ||
+    s.interviews.length ||
+    Object.keys(s.reviews).length ||
+    (s.terminals && Object.keys(s.terminals).length),
   );
 }
 // A synchronous recovery copy closes the small gap between a UI change and an

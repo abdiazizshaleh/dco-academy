@@ -75,6 +75,13 @@ describe("saved student work", () => {
   });
   it("recognizes guest progress even when it is only a bookmark or planner change", () => {
     expect(hasLearningProgress(initial)).toBe(false);
+    expect(
+      hasLearningProgress({
+        ...initial,
+        planner: { ...initial.planner, start: "2026-12-15" },
+      }),
+    ).toBe(true);
+    expect(hasLearningProgress({ ...initial, theme: "light" })).toBe(true);
     expect(hasLearningProgress({ ...initial, bookmarks: ["term:ecc"] })).toBe(
       true,
     );
