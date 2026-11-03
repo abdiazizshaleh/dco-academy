@@ -44,6 +44,11 @@ import {
 import { scenarios, actLab, freshLab } from "./simulation";
 import {
   initial,
+  emptyExam,
+  emptyInterview,
+  type ExamDraft,
+  type InterviewDraft,
+  type InterviewPractice,
   mastery,
   makeStory,
   storyFeedback,
@@ -58,7 +63,7 @@ import { Glossary } from "./GlossaryView";
 import { glossary, searchGlossary } from "./glossary";
 import { TerminalLab } from "./TerminalLab";
 import { freshTerminal } from "./terminal";
-import { useLearningState } from "./useLearningState";
+import { useLearningState, syncLabel } from "./useLearningState";
 import { CloudAccount } from "./CloudAccount";
 const nav = [
   ["Dashboard", LayoutDashboard],
@@ -153,27 +158,132 @@ function App() {
   const [modal, MO] = useState(false);
   const [scenarioId, SI] = useState(initialRoute.scenarioId);
   const [incidentFilter, IF] = useState("All");
-  const [storyId, ST] = useState("");
-  const [examMode, EM] = useState("Diagnostic");
-  const [examQuestions, EQ] = useState<Lesson[]>([]);
-  const [examIndex, EI] = useState(0);
-  const [examAnswers, EA] = useState<number[]>([]);
-  const [examChoice, EC] = useState<number | null>(null);
-  const [examFeedback, EF] = useState(false);
-  const [examFinished, ED] = useState(false);
-  const [examStart, ES] = useState(0);
+  const storyId = s.activeStoryId || "";
+  const ST = (id: string) => S((p) => ({ ...p, activeStoryId: id }));
+  const exam = s.exam || emptyExam;
+  function examField<K extends keyof ExamDraft>(
+    key: K,
+    value: React.SetStateAction<ExamDraft[K]>,
+  ) {
+    S((p) => {
+      const e = p.exam || emptyExam;
+      return {
+        ...p,
+        exam: {
+          ...e,
+          [key]:
+            typeof value === "function"
+              ? (value as (v: ExamDraft[K]) => ExamDraft[K])(e[key])
+              : value,
+        },
+      };
+    });
+  }
+  const examMode = exam.mode,
+    examIndex = exam.index,
+    examAnswers = exam.answers,
+    examChoice = exam.choice,
+    examFeedback = exam.feedback,
+    examFinished = exam.finished,
+    examStart = exam.startedAt;
+  const examQuestions = exam.questionIds
+    .map((id) => lessons.find((l) => l.id === id)!)
+    .filter(Boolean);
+  const EM = (v: string) => examField("mode", v),
+    EQ = (v: Lesson[]) =>
+      examField(
+        "questionIds",
+        v.map((l) => l.id),
+      ),
+    EI = (v: React.SetStateAction<number>) => examField("index", v),
+    EA = (v: React.SetStateAction<number[]>) => examField("answers", v),
+    EC = (v: number | null) => examField("choice", v),
+    EF = (v: boolean) => examField("feedback", v),
+    ED = (v: boolean) => examField("finished", v),
+    ES = (v: number) => examField("startedAt", v);
   const [tick, Tick] = useState(Date.now());
-  const [interviewMode, IM] = useState("Behavioral");
-  const [questionIndex, QI] = useState(0);
-  const [answer, A] = useState("");
-  const [follow, FO] = useState("");
-  const [followAnswer, FA] = useState("");
-  const [coaching, CO] = useState<string[]>([]);
+  const practice = s.interviewPractice || emptyInterview;
+  const interviewMode = practice.mode;
+  const practiceMode =
+    interviewMode === "Technical" ? "Technical" : "Behavioral";
+  const questionIndex = practice.indices[practiceMode];
+  const draftKey = `${practiceMode}:${questionIndex}`;
+  const draft = practice.drafts[draftKey] || {
+    answer: "",
+    follow: "",
+    followAnswer: "",
+    coaching: [],
+  };
+  const answer = draft.answer,
+    follow = draft.follow,
+    followAnswer = draft.followAnswer,
+    coaching = draft.coaching;
+  function interviewField<K extends keyof InterviewDraft>(
+    key: K,
+    value: InterviewDraft[K],
+  ) {
+    S((p) => {
+      const v = p.interviewPractice || emptyInterview;
+      const d = v.drafts[draftKey] || {
+        answer: "",
+        follow: "",
+        followAnswer: "",
+        coaching: [],
+      };
+      return {
+        ...p,
+        interviewPractice: {
+          ...v,
+          drafts: { ...v.drafts, [draftKey]: { ...d, [key]: value } },
+        },
+      };
+    });
+  }
+  const IM = (mode: InterviewPractice["mode"]) =>
+    S((p) => ({
+      ...p,
+      interviewPractice: { ...(p.interviewPractice || emptyInterview), mode },
+    }));
+  const QI = (value: React.SetStateAction<number>) =>
+    S((p) => {
+      const v = p.interviewPractice || emptyInterview;
+      return {
+        ...p,
+        interviewPractice: {
+          ...v,
+          indices: {
+            ...v.indices,
+            [practiceMode]:
+              typeof value === "function"
+                ? value(v.indices[practiceMode])
+                : value,
+          },
+        },
+      };
+    });
+  const A = (v: string) => interviewField("answer", v),
+    FO = (v: string) => interviewField("follow", v),
+    FA = (v: string) => interviewField("followAnswer", v),
+    CO = (v: string[]) => interviewField("coaching", v);
   const [rehearsal, RH] = useState<number | null>(null);
   const [rehearsalLength, RL] = useState(120);
-  const [optTx, OT] = useState(-2);
-  const [optRx, OR] = useState(-8);
-  const [budget, BU] = useState(8);
+  const optical = s.optical || { tx: -2, rx: -8, budget: 8 };
+  const optTx = optical.tx,
+    optRx = optical.rx,
+    budget = optical.budget;
+  function opticalField(key: "tx" | "rx" | "budget", value: number) {
+    if (Number.isFinite(value))
+      S((p) => ({
+        ...p,
+        optical: {
+          ...(p.optical || { tx: -2, rx: -8, budget: 8 }),
+          [key]: value,
+        },
+      }));
+  }
+  const OT = (v: number) => opticalField("tx", v),
+    OR = (v: number) => opticalField("rx", v),
+    BU = (v: number) => opticalField("budget", v);
   const [explore, EX] = useState("Rack");
   const inputFile = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -270,6 +380,10 @@ function App() {
     }));
   }
   function startExam(mode = examMode) {
+    if (examQuestions.length && !examFinished) {
+      go("Practice Exams");
+      return;
+    }
     EM(mode);
     const qs =
       mode === "Weak-topic practice"
@@ -303,7 +417,7 @@ function App() {
     go("Practice Exams");
   }
   function gradeExam() {
-    if (examChoice === null) return;
+    if (examChoice === null || examFeedback) return;
     const l = examQuestions[examIndex];
     const score = examChoice === l.answer ? 100 : 0;
     EA((p) => [...p, examChoice]);
@@ -377,16 +491,20 @@ function App() {
       S(v);
       T("Backup imported");
     } catch (e) {
-      T(e instanceof Error ? e.message : "Import failed");
+      T(
+        "That file isn’t a valid DCO Academy backup. Choose a JSON file exported from the academy.",
+      );
     }
   }
   function interviewNext() {
     const combined = answer + " " + followAnswer;
     const flags: string[] = [];
     if (combined.split(/\s+/).length < 60)
-      flags.push("Add enough detail to make your reasoning assessable.");
+      flags.push(
+        "Add a little more detail so someone can follow your reasoning.",
+      );
     if (!/\bI\b/i.test(combined))
-      flags.push("Identify your own responsibility and contribution.");
+      flags.push("Explain what you were responsible for and what you did.");
     if (!/because|chose|decid|reason|alternative/i.test(combined))
       flags.push(
         "Explain why you chose your actions and what alternatives you considered.",
@@ -396,7 +514,7 @@ function App() {
       !/safe|approv|authoriz|escalat|verify|evidence/i.test(combined)
     )
       flags.push(
-        "Explain evidence, authorization, safety boundaries, and verification.",
+        "Say what you checked, which changes were approved, and how you tested the fix.",
       );
     if (!/result|verified|observed|improved|restored|learn/i.test(combined))
       flags.push("Describe the observed result and what you learned.");
@@ -418,6 +536,8 @@ function App() {
     const bank =
       interviewMode === "Technical" ? technicalPrompts : behavioralPrompts;
     const score = Math.max(0, 100 - flags.length * 20);
+    if (draft.recorded) return;
+    interviewField("recorded", true);
     S((p) => ({
       ...p,
       interviews: [
@@ -469,7 +589,14 @@ function App() {
   if (!loaded) return <div className="loading">Loading your workspace...</div>;
   return (
     <div className="app">
-      <a className="skip" href="#main">
+      <a
+        className="skip"
+        href="#main"
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById("main")?.focus();
+        }}
+      >
         Skip to content
       </a>
       <aside className={mobile ? "sidebar open" : "sidebar"}>
@@ -523,15 +650,15 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div>
-            <span className="status-dot" />
-            {learningStore.user
-              ? learningStore.status === "saved"
-                ? "Saved to your account"
-                : learningStore.status === "saving"
-                  ? "Saving to account..."
-                  : "Saved on this device"
-              : "Saved on this device"}
+          <div role="status" aria-live="polite">
+            <span
+              className={"status-dot " + (saveError ? "status-warning" : "")}
+            />
+            {syncLabel(
+              learningStore.status,
+              Boolean(learningStore.user),
+              saveError,
+            )}
           </div>
           <p>35 lessons · 15 incident labs</p>
           <button className="text-button" onClick={() => MO(true)}>
@@ -566,7 +693,7 @@ function App() {
               aria-label="Account and sync"
             >
               <Cloud size={17} />
-              <span>{learningStore.user ? "Account" : "Sign in to save"}</span>
+              <span>{learningStore.user ? "Account" : "Sign in to sync"}</span>
             </button>
             <button
               className="search-trigger"
@@ -649,7 +776,10 @@ function App() {
               />
               {currentLesson && mod ? (
                 <>
-                  <button className="text-button" onClick={() => LI(null)}>
+                  <button
+                    className="text-button"
+                    onClick={() => go("Learning Path")}
+                  >
                     ← All modules
                   </button>
                   <div className="lesson-layout">
@@ -659,7 +789,7 @@ function App() {
                       </span>
                       <h2>{currentLesson.title}</h2>
                       <LessonBody
-                        key={currentLesson.id}
+                        key={"body:" + currentLesson.id}
                         lesson={currentLesson}
                         domain={mod.domain}
                       />
@@ -684,8 +814,18 @@ function App() {
                         placeholder="What I found, what I would check next, and how I would test the fix"
                       />
                       <KnowledgeCheck
-                        key={currentLesson.id}
+                        key={"check:" + currentLesson.id}
                         lesson={currentLesson}
+                        saved={s.quizChoices?.[currentLesson.id]}
+                        onChange={(value) =>
+                          S((p) => ({
+                            ...p,
+                            quizChoices: {
+                              ...p.quizChoices,
+                              [currentLesson.id]: value,
+                            },
+                          }))
+                        }
                         onGrade={(score) => {
                           attempt(currentLesson.id, mod.domain, score, "quiz");
                           S((p) => ({
@@ -709,8 +849,8 @@ function App() {
                           }));
                           T(
                             score
-                              ? "Correct. Your progress is saved."
-                              : "Review the explanation, then reassess later.",
+                              ? "Correct. Lesson completed."
+                              : "Review the explanation, then try again when you’re ready.",
                           );
                         }}
                       />
@@ -765,7 +905,7 @@ function App() {
                               (l.id === lessonId ? "selected" : "")
                             }
                             key={l.id}
-                            onClick={() => LI(l.id)}
+                            onClick={() => learn(l.id)}
                           >
                             {s.completed.includes(l.id) ? (
                               <CheckCircle2 size={15} />
@@ -805,8 +945,17 @@ function App() {
                             const match = scenarios.find(
                               (sc) => sc.domain === mod.domain,
                             );
-                            SI(match?.id || scenarios[0].id);
-                            go("Incident Simulator");
+                            const id = match?.id || scenarios[0].id;
+                            SI(id);
+                            history.pushState(
+                              null,
+                              "",
+                              routeUrl("Incident Simulator", null, id),
+                            );
+                            P("Incident Simulator");
+                            LI(null);
+                            M(false);
+                            window.scrollTo(0, 0);
                           }}
                         >
                           Open a related incident <ArrowRight size={15} />
@@ -840,6 +989,33 @@ function App() {
                       ))}
                     </select>
                   </div>
+                  {!modules.some(
+                    (m) =>
+                      (filter === "All" || m.domain === filter) &&
+                      (
+                        m.title +
+                        " " +
+                        m.lessons
+                          .map((l) => l.title + " " + l.concept)
+                          .join(" ")
+                      )
+                        .toLowerCase()
+                        .includes(query.toLowerCase()),
+                  ) && (
+                    <section className="panel empty-state">
+                      <h2>No lessons found</h2>
+                      <p>Try a shorter search or choose another topic.</p>
+                      <button
+                        className="button secondary"
+                        onClick={() => {
+                          Q("");
+                          F("All");
+                        }}
+                      >
+                        Show all lessons
+                      </button>
+                    </section>
+                  )}
                   <div className="module-grid">
                     {modules
                       .filter(
@@ -958,6 +1134,8 @@ function App() {
               />
               <section className="panel">
                 <Server
+                  state={s.hardware}
+                  onChange={(hardware) => S((p) => ({ ...p, hardware }))}
                   onAssess={(score) =>
                     attempt(
                       "component-identification",
@@ -1420,12 +1598,7 @@ function App() {
                     className={interviewMode === t ? "selected" : ""}
                     key={t}
                     onClick={() => {
-                      IM(t);
-                      QI(0);
-                      A("");
-                      FA("");
-                      FO("");
-                      CO([]);
+                      IM(t as InterviewPractice["mode"]);
                     }}
                   >
                     {t}
@@ -1528,26 +1701,39 @@ function App() {
                       <button
                         className="button secondary"
                         onClick={() => {
-                          QI((i) => i + 1);
-                          A("");
-                          FA("");
-                          FO("");
-                          CO([]);
+                          QI(
+                            (i) =>
+                              (i + 1) %
+                              (practiceMode === "Technical"
+                                ? technicalPrompts.length
+                                : behavioralPrompts.length),
+                          );
                         }}
                       >
                         Next question
                       </button>
+                      <button
+                        className="text-button"
+                        disabled={questionIndex === 0}
+                        onClick={() => QI((i) => i - 1)}
+                      >
+                        Previous question
+                      </button>
                     </div>
+                    <p className="muted small-text">
+                      Your answers save as you type. You can leave and return to
+                      this question.
+                    </p>
                     {coaching.length > 0 && (
                       <div className="callout">
-                        <h3>Practice rubric feedback</h3>
+                        <h3>Feedback on your answer</h3>
                         {coaching.map((c) => (
                           <p key={c}>{c}</p>
                         ))}
                         <small>
-                          Deterministic structural checks. Technical truth,
-                          authenticity, and principle alignment need human
-                          review.
+                          This checks the structure of your answer. Ask someone
+                          familiar with the work to review the technical
+                          details.
                         </small>
                       </div>
                     )}
@@ -1555,11 +1741,11 @@ function App() {
                   <aside className="panel lesson-aside">
                     <h3>What to include</h3>
                     {[
-                      "Clarify the context and impact.",
-                      "Name your personal responsibility.",
-                      "Explain the decision and its alternatives.",
-                      "Give evidence for the result.",
-                      "Reflect on what you learned.",
+                      "Explain what happened and who was affected.",
+                      "Make your part in the work clear.",
+                      "Say what you chose to do and why.",
+                      "Describe what changed and how you knew.",
+                      "Finish with what you learned.",
                     ].map((t, i) => (
                       <p className="checklist-item" key={t}>
                         <span>{i + 1}</span>
@@ -1573,8 +1759,8 @@ function App() {
                       Open your story vault <ArrowRight size={14} />
                     </button>
                     <p className="muted small-text">
-                      Interview formats vary. Confirm your loop with your
-                      recruiter. No official question bank is reproduced here.
+                      These are practice questions. Your recruiter can confirm
+                      what to expect in your interview.
                     </p>
                     <SourceList ids={["aws-lp", "aws-interview"]} />
                   </aside>
@@ -1687,8 +1873,8 @@ function App() {
                     ))
                   ) : (
                     <p className="muted">
-                      Start with an incident you remember well. Aim for 10-16
-                      versatile, authentic stories over time.
+                      Start with one incident you remember well. Add other
+                      examples as you practice.
                     </p>
                   )}
                   <h3 className="spaced">Principle coverage</h3>
@@ -1733,11 +1919,10 @@ function App() {
                             {
                               situation: "Situation",
                               task: "Task & personal responsibility",
-                              actions: "Actions & decision rationale",
+                              actions: "Actions and why you chose them",
                               result: "Result",
                               lesson: "Lesson learned",
-                              evidence:
-                                "Quantifiable evidence or observed outcome",
+                              evidence: "What you observed or measured",
                               questions: "Questions this story could answer",
                             }[field]
                           }
@@ -1777,9 +1962,9 @@ function App() {
                         storyFeedback(story).map((f) => <p key={f}>{f}</p>)
                       ) : (
                         <p>
-                          The core structural fields are present. Check
-                          authenticity, factual support, and relevance with a
-                          trusted reviewer.
+                          You’ve covered the main points. Read it aloud and ask
+                          someone who knows the work whether the story is clear
+                          and accurate.
                         </p>
                       )}
                     </div>
@@ -1828,8 +2013,10 @@ function App() {
                       Practice a follow-up question <MessageSquare size={15} />
                     </button>
                     <p className="muted small-text">
-                      Stories save automatically on this device. Export
-                      regularly to keep a separate backup.
+                      {learningStore.user
+                        ? "Your stories save to your account automatically."
+                        : "Your stories save in this browser automatically. Sign in to keep them across devices."}{" "}
+                      Export a backup if you want a separate copy.
                     </p>
                   </section>
                 ) : (
@@ -1880,6 +2067,10 @@ function App() {
                       }}
                     />
                   </div>
+                  <p className="muted small-text">
+                    Your answers save as you go. Leave this page and return here
+                    to continue.
+                  </p>
                   <h2>{examQuestions[examIndex].question}</h2>
                   <div className="answer-options">
                     {examQuestions[examIndex].options.map((o, i) => (
@@ -1929,12 +2120,18 @@ function App() {
                       Check answer
                     </button>
                   )}
+                  <button
+                    className="text-button spaced"
+                    onClick={() => go("Dashboard")}
+                  >
+                    Save and finish later
+                  </button>
                 </section>
               ) : (
                 <>
                   {examFinished && (
                     <section className="panel">
-                      <span className="pill green">ASSESSMENT SAVED</span>
+                      <span className="pill green">Practice complete</span>
                       <h2>
                         {
                           examAnswers.filter(
@@ -1944,8 +2141,8 @@ function App() {
                         / {examQuestions.length} correct
                       </h2>
                       <p>
-                        Incorrect answers have been scheduled for reassessment
-                        in six hours. Correct concepts return in three days.
+                        Questions you missed return for review in six hours.
+                        Correct answers return in three days.
                       </p>
                       <button
                         className="button primary"
@@ -1977,8 +2174,8 @@ function App() {
                           {i === 0
                             ? "12 questions to find your starting point."
                             : i === 1
-                              ? "10 concepts from your least demonstrated domains."
-                              : `${t === "Mock C" ? 20 : t === "Mock A" ? Math.ceil(lessons.length / 2) : Math.floor(lessons.length / 2)} questions · timed with an elapsed clock · self-paced submission.`}
+                              ? "10 questions on the topics you’ve practiced least or found difficult."
+                              : `${t === "Mock C" ? 20 : t === "Mock A" ? Math.ceil(lessons.length / 2) : Math.floor(lessons.length / 2)} questions · work at your own pace.`}
                         </p>
                         <span className="link">
                           Start assessment <ArrowRight size={14} />
@@ -2050,7 +2247,7 @@ function App() {
               <PageTitle
                 eyebrow="Study planner"
                 title="Plan your study time"
-                description="Choose a pace that fits your week. Unfinished tasks stay marked for catch-up."
+                description="Choose a pace that fits your week, then check off tasks as you finish them."
               />
               <section className="panel">
                 <div className="input-grid">
@@ -2118,18 +2315,22 @@ function App() {
                       onChange={(e) =>
                         S((p) => ({
                           ...p,
-                          planner: { ...p.planner, start: e.target.value },
+                          planner: {
+                            ...p.planner,
+                            start: e.target.value || p.planner.start,
+                          },
                         }))
                       }
                     />
                   </label>
                 </div>
                 <p className="muted">
-                  Each session has {Math.round(s.planner.hours * 60)} minutes
-                  available. Use approximately 40% for lessons, 35% for hands-on
-                  practice, and 25% for recall and interview rehearsal. Your
-                  target date is a reference; change available time or the plan
-                  start to fit it.
+                  You have {Math.round(s.planner.hours * 60)} minutes per
+                  session: about {Math.round(s.planner.hours * 24)} for reading,{" "}
+                  {Math.round(s.planner.hours * 21)} for a lab, and{" "}
+                  {Math.round(s.planner.hours * 15)} for review or interview
+                  practice. The target date is a reminder; it won’t change the
+                  schedule for you.
                 </p>
               </section>
               <div className="module-grid">
@@ -2162,13 +2363,13 @@ function App() {
                           ),
                         ) && (
                           <span className="pill orange">
-                            CATCH-UP · CARRIED FORWARD
+                            Unfinished - catch up when you can
                           </span>
                         )}
                       {[
                         `Learn: ${lesson.title}`,
                         `Lab: ${sc.title}`,
-                        "Recall a weak concept & rehearse one real story",
+                        "Review a difficult topic and rehearse a story",
                       ].map((task, j) => {
                         const id = `${s.planner.start}-${i}-${j}`;
                         return (
@@ -2251,31 +2452,35 @@ function App() {
                 "community-reported",
               ].includes(filter) && (
                 <section className="panel">
-                  <h2>Research library</h2>
+                  <h2>Documentation and study guides</h2>
                   {!query &&
                     ["All", "Sources", "community-reported"].includes(
                       filter,
                     ) && (
                       <div className="callout">
-                        <b>How we use community preparation guides</b>
+                        <b>Using the community study guide</b>
                         <p>
-                          The linked GitHub guide adds useful study topics and
-                          rehearsal structure. Its claimed interview weighting
-                          is not verified official policy. Use authentic
-                          experience and supported observations instead of
-                          adopting its sample stories or metrics. Reversible
-                          hardware changes still need impact checks, approved
-                          procedures, and authorization.
-                        </p>
-                        <p>
-                          Keep no-power and no-POST as separate fault classes.
-                          Fiber color alone does not establish type; optical
-                          power must be compared with the specific receiver
-                          limits. ESD controls are task-specific and do not
-                          replace electrical safety or stop-work boundaries.
+                          The GitHub guide is useful for choosing topics and
+                          practice questions. Check technical details against
+                          the documentation below, and use your own experiences
+                          for interview answers. Its interview percentages are
+                          community estimates.
                         </p>
                       </div>
                     )}
+                  {!sources.some(
+                    (sc) =>
+                      (filter === "All" ||
+                        filter === "Sources" ||
+                        sc.type === filter) &&
+                      (sc.title + " " + sc.publisher + " " + sc.applicability)
+                        .toLowerCase()
+                        .includes(query.toLowerCase()),
+                  ) && (
+                    <p className="muted">
+                      No documentation matches this search. Try another term.
+                    </p>
+                  )}
                   <SourceList
                     ids={sources
                       .filter(
@@ -2330,6 +2535,26 @@ function App() {
               )}
               {["All", "Lessons", "Bookmarks"].includes(filter) && (
                 <div className="module-grid">
+                  {!lessons.some(
+                    (l) =>
+                      (filter !== "Bookmarks" || s.bookmarks.includes(l.id)) &&
+                      (l.title + " " + l.concept + " " + l.mechanism)
+                        .toLowerCase()
+                        .includes(query.toLowerCase()),
+                  ) && (
+                    <section className="panel">
+                      <h2>
+                        {filter === "Bookmarks" && !query
+                          ? "No saved lessons yet"
+                          : "No lessons found"}
+                      </h2>
+                      <p className="muted">
+                        {filter === "Bookmarks" && !query
+                          ? "Use the bookmark button on a lesson to keep it here."
+                          : "Try a shorter search or another topic."}
+                      </p>
+                    </section>
+                  )}
                   {lessons
                     .filter(
                       (l) =>
@@ -2373,9 +2598,8 @@ function App() {
                 </div>
               )}
               <p className="muted small-text">
-                Source review date: November 2, 2026. Job postings and interview
-                processes can change. Community reports are anecdotal. Academy
-                is independent and not affiliated with Amazon or AWS.
+                References were checked in November 2026. Check current job
+                postings and ask your recruiter about the interview.
               </p>
             </>
           )}
@@ -2388,12 +2612,11 @@ function App() {
               />
               <div className="two-cards">
                 <section className="panel">
-                  <h2>Your transferable strengths</h2>
+                  <h2>Experience you can build on</h2>
                   <p>
-                    A+, Network+, Security+, WGU Cloud Computing, enterprise
-                    support, and a Fedora/Proxmox/container homelab offer useful
-                    foundations. Demonstrate what you can do with specific
-                    evidence.
+                    Support tickets, hardware repairs, networking courses, and
+                    homelab projects can all give you useful examples. Pick work
+                    you know well and explain what you did.
                   </p>
                   {[
                     "Hardware triage → server component isolation",
@@ -2411,21 +2634,21 @@ function App() {
                     className="button primary"
                     onClick={() => go("STAR Story Vault")}
                   >
-                    Map experience to stories
+                    Write about your experience
                   </button>
                 </section>
                 <section className="panel">
                   <h2>Application readiness checklist</h2>
                   {[
                     "Read the specific current job posting and location requirements",
-                    "Compare required experience with honest evidence",
+                    "Match the requirements to examples from your work or study",
                     "Ask the recruiter about level, shifts, and loop format",
-                    "Prepare a sanitized lab write-up labeled as simulated work",
-                    "Review all 16 principles and rehearse authentic stories",
+                    "Write up a lab project and make clear that it was a simulation",
+                    "Review the 16 Leadership Principles and practice your own stories",
                     "Practice optics, Linux, and safe physical troubleshooting",
                     "Confirm interview time zone, format, location or meeting link, and recruiter contact",
                     "Test microphone, webcam, connection, and backup communication plan",
-                    "Review your real stories and evidence; disclose results that were not measured",
+                    "Review your stories and check any numbers you plan to mention",
                     "Prepare concise questions about training, team responsibilities, and shift expectations",
                   ].map((t, i) => (
                     <label className="plan-task" key={t}>
@@ -2457,13 +2680,11 @@ function App() {
                 </section>
               </div>
               <section className="panel spaced">
-                <h2>Demonstrate competence with a lab note</h2>
+                <h2>Show how you worked through a problem</h2>
                 <p>
-                  Include the symptom, asset and topology, observations,
-                  competing hypotheses, safe approved action, verification, and
-                  reflection. Label simulated incidents accurately. This academy
-                  is preparation, not production authorization or an AWS
-                  certification.
+                  Describe the problem, the affected equipment, what you
+                  checked, the fix, and how you tested it. Add what you’d do
+                  differently next time. Label academy exercises as simulations.
                 </p>
                 <button className="button secondary" onClick={exportData}>
                   <Download size={16} />
@@ -2693,10 +2914,9 @@ function LessonBody({ lesson: l, domain }: { lesson: Lesson; domain: string }) {
         <div className="callout">
           <b>Check your reasoning</b>
           <p>
-            Consider a fault in each dependency named above. Which observations
-            would still look healthy? Which observation would contradict your
-            preferred hypothesis? Write a diagnostic that separates these cases
-            without making an unauthorized change.
+            Imagine one of the parts or connections above fails. What would
+            still work? What result would make you reconsider the cause? Write
+            down a check that would help you tell the difference.
           </p>
         </div>
       )}
@@ -2715,12 +2935,16 @@ function LessonBody({ lesson: l, domain }: { lesson: Lesson; domain: string }) {
 function KnowledgeCheck({
   lesson,
   onGrade,
+  saved,
+  onChange,
 }: {
   lesson: Lesson;
   onGrade: (s: number) => void;
+  saved?: { choice: number | null; graded: boolean };
+  onChange: (value: { choice: number | null; graded: boolean }) => void;
 }) {
-  const [c, C] = useState<number | null>(null);
-  const [graded, G] = useState(false);
+  const c = saved?.choice ?? null,
+    graded = saved?.graded ?? false;
   return (
     <section className="knowledge-check">
       <span className="eyebrow">KNOWLEDGE CHECK</span>
@@ -2731,7 +2955,7 @@ function KnowledgeCheck({
             key={o}
             className={c === i ? "selected" : ""}
             disabled={graded}
-            onClick={() => C(i)}
+            onClick={() => onChange({ choice: i, graded: false })}
           >
             {o}
           </button>
@@ -2741,7 +2965,7 @@ function KnowledgeCheck({
         className="button primary"
         disabled={c === null || graded}
         onClick={() => {
-          G(true);
+          onChange({ choice: c, graded: true });
           onGrade(c === lesson.answer ? 100 : 0);
         }}
       >
@@ -2755,8 +2979,7 @@ function KnowledgeCheck({
           <button
             className="text-button"
             onClick={() => {
-              G(false);
-              C(null);
+              onChange({ choice: null, graded: false });
             }}
           >
             Try the question again

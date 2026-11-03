@@ -89,7 +89,6 @@ The existing version-1 IndexedDB records and JSON backup format remain compatibl
 
 Redesign validation: 20 unit tests and five Playwright tests pass, including all five learner journeys, component identification, URL refresh/back navigation, terminal history/completion, incident filtering, full-text story printing, and all navigation sections at phone width in addition to the theme checks.
 
-
 ## GitHub Pages and account saving
 
 Repository: https://github.com/abdiazizshaleh/dco-academy
@@ -110,7 +109,7 @@ Account saving is connected to the DCO Academy project (`rpvowbzopumqgjgyfqbg`) 
 
 ### Saved records and conflict handling
 
-Account saves include lesson completion, assessment and incident attempts, notes, bookmarks, stories, terminal state, review schedules, and plans. Existing guest records are not automatically uploaded when an account signs in: use the explicit earlier-progress import in Account & sync, or import a JSON backup after signing in.
+Account saves include lesson completion, assessment and incident attempts, notes, bookmarks, stories, terminal state, review schedules, and plans. When an account has no earlier account or cached record, existing guest work moves into it automatically. Existing accounts retain their own records; use the explicit earlier-progress import in Account & sync, or import a JSON backup after signing in, to replace them deliberately.
 
 Changes save to an account-specific IndexedDB cache immediately and upload after a short delay. The database stores an atomic snapshot plus a revision. Updates must match the revision that was loaded, so another device’s work is not silently overwritten. A conflict asks which copy to keep; choosing the account copy also retains the displaced local state under a recovery key in IndexedDB. Offline work remains cached and is checked against the server on reconnect. This is snapshot-based conflict resolution, not real-time collaborative merging.
 
@@ -122,13 +121,11 @@ On the original site, open Data & preferences and export your JSON backup. On th
 
 `cloud-e2e/saving.spec.ts` tests the sign-in, restore, autosave, revision-conflict, offline-recovery, and guest/account separation flows against a mocked API. Start a second development server with test-only public configuration at port 5174, then run `npx playwright test --config playwright.cloud.config.ts`. These browser tests do not replace a live RLS verification after provisioning.
 
-
 ### Provisioning verification
 
 The hosted database was checked with two temporary accounts: an owner could save and update a snapshot, a separate sign-in could recover it, another account could not read or modify it, anonymous table access was denied, forged ownership was rejected, and an update with a stale revision made no change. The temporary accounts and records were removed afterward. The checked-in SQL was executed against the new project using the linked CLI; it was not inserted into Supabase migration history by that direct-query operation. For this existing project, do not replay the initial creation SQL as a new migration. New projects can apply it once normally.
 
 Auth uses confirmed email/password accounts and PKCE confirmation/reset links back to the exact GitHub Pages URL. Only the site URL, redirect allowlist, and minimum password length were adjusted; provider secrets were not placed in the frontend. Free-plan usage limits and the default email service restrictions still apply. The `service_role` key was used only in a local verification process to create/delete temporary accounts; it is not committed, passed to GitHub, or shipped to the browser.
-
 
 ## Glossary and Linux refinement
 
@@ -136,4 +133,14 @@ The glossary has its own navigation entry, full-text/acronym search, six topic f
 
 Each Linux exercise keeps a separate host state under the existing version-1 learning record. Earlier single-host terminal records remain readable. Completion depends on collected observations, the actual repaired state, and subsequent verification, rather than clicking a button or matching a command string. Changing a configuration affects later reads and diagnostics. Clearing visible output keeps host state and command recall. Restarting one lab does not remove the other lab sessions or scored attempts.
 
-Current checks: 39 unit tests plus eight browser tests, covering the earlier learner journeys, all four terminal solutions, filesystem/text operations, accurate journal filtering and ping counts, glossary lookup/notes/bookmarks, JSON round trips, separate lab persistence, hash navigation, and mobile layout. The original Sites URL is kept in sync with GitHub Pages using the same app source and database, while retaining its existing private access policy.
+Glossary-release checks: 39 unit tests plus eight browser tests, covering the earlier learner journeys, all four terminal solutions, filesystem/text operations, accurate journal filtering and ping counts, glossary lookup/notes/bookmarks, JSON round trips, separate lab persistence, hash navigation, and mobile layout. The original Sites URL is kept in sync with GitHub Pages using the same app source and database, while retaining its existing private access policy.
+
+## Student walkthrough refinements
+
+All 14 pages and 35 lessons were exercised as a first-time student. Switching lessons no longer leaves duplicate content from the previous lesson. Keyboard skip navigation preserves the current route, and the lesson sidebar creates browser history entries.
+
+Unfinished exams, per-question behavioral and technical interview drafts, lesson quiz choices/feedback, hardware-identification practice, optical readings, and the selected STAR story now join the saved learning record. New fields are optional so existing version-1 backups and account records remain compatible. A synchronous, account-scoped recovery copy protects the last edit while IndexedDB commits; it is removed only after that exact copy is durable. Account conflict checks and guest/account isolation remain in place. Sign-out waits for an in-flight save and the final edit; reconnect retries locally retained work, and a clean workspace refreshes account progress on window focus.
+
+Interface text now distinguishes device saves, pending account saves, errors, and conflicts. Empty searches explain how to recover. Hardware questions can be retried, glossary deep links reveal the selected term, and instructions throughout the planner, stories, assessments, and career preparation use plain language.
+
+Validation: 43 unit tests, 11 learner browser journeys, and two account-saving browser journeys. The walkthrough covers all 14 navigation pages, every lesson, mobile layouts in both themes, recovery after immediate reload, account conflicts/offline work, new-account carryover, final edits during sign-out, and JSON backup round trips.

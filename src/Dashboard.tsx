@@ -61,7 +61,7 @@ export function Dashboard({
           <p className="muted">
             {s.attempts.length
               ? "Pick up a lesson, work through a fault, or review what you missed."
-              : "Study server hardware, practice troubleshooting, and prepare for your DCO interview."}
+              : "Prepare for a data center operations interview with lessons, troubleshooting labs, and practice questions."}
           </p>
         </div>
         <button
@@ -322,7 +322,11 @@ export function Dashboard({
               </button>
             ))}
             <button className="button secondary full" onClick={startExam}>
-              {s.attempts.length ? "Retake diagnostic" : "Take diagnostic"}
+              {s.exam?.questionIds.length && !s.exam.finished
+                ? "Continue practice test"
+                : s.attempts.length
+                  ? "Retake diagnostic"
+                  : "Take diagnostic"}
               <ArrowRight size={15} />
             </button>
             <small className="muted">12 questions · about 10 min</small>

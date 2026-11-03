@@ -1,3 +1,5 @@
+import { lessons } from "./content";
+const lessonIds = new Set(lessons.map((l) => l.id));
 import { get, set } from "idb-keyval";
 import { isTerminalState, terminalLabs } from "./terminal";
 import type { LabState, TerminalState } from "./simulation";
@@ -21,15 +23,63 @@ export type Story = {
   questions: string;
   uses: number;
 };
+export type ExamDraft = {
+  mode: string;
+  questionIds: string[];
+  index: number;
+  answers: number[];
+  choice: number | null;
+  feedback: boolean;
+  finished: boolean;
+  startedAt: number;
+};
+export const emptyExam: ExamDraft = {
+  mode: "Diagnostic",
+  questionIds: [],
+  index: 0,
+  answers: [],
+  choice: null,
+  feedback: false,
+  finished: false,
+  startedAt: 0,
+};
+export type InterviewDraft = {
+  answer: string;
+  follow: string;
+  followAnswer: string;
+  coaching: string[];
+  recorded?: boolean;
+};
+export type InterviewPractice = {
+  mode: "Behavioral" | "Technical" | "Principles";
+  indices: { Behavioral: number; Technical: number };
+  drafts: Record<string, InterviewDraft>;
+};
+export const emptyInterview: InterviewPractice = {
+  mode: "Behavioral",
+  indices: { Behavioral: 0, Technical: 0 },
+  drafts: {},
+};
+export type HardwareProgress = {
+  part: string;
+  quiz: number | null;
+  result: boolean | null;
+};
 export type State = {
   version: 1;
   theme: "dark" | "light";
+  exam?: ExamDraft;
+  hardware?: HardwareProgress;
+  optical?: { tx: number; rx: number; budget: number };
+  interviewPractice?: InterviewPractice;
+  quizChoices?: Record<string, { choice: number | null; graded: boolean }>;
   completed: string[];
   attempts: Attempt[];
   labs: Record<string, LabState>;
   terminal?: TerminalState;
   terminals?: Record<string, TerminalState>;
   stories: Story[];
+  activeStoryId?: string;
   bookmarks: string[];
   notes: Record<string, string>;
   planner: {
@@ -61,17 +111,69 @@ export const initial: State = {
     days: 14,
     hours: 1,
     target: "",
-    start: new Date().toISOString().slice(0, 10),
+    start: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`,
     done: [],
   },
   reviews: {},
   interviews: [],
 };
+export function hasLearningProgress(s: State) {
+  return Boolean(
+    s.completed.length ||
+    s.attempts.length ||
+    s.stories.length ||
+    s.bookmarks.length ||
+    Object.keys(s.notes).length ||
+    Object.keys(s.labs).length ||
+    s.terminal ||
+    s.optical ||
+    s.hardware ||
+    s.exam?.questionIds.length ||
+    (s.interviewPractice && Object.keys(s.interviewPractice.drafts).length) ||
+    (s.quizChoices && Object.keys(s.quizChoices).length) ||
+    s.planner.done.length ||
+    s.planner.target ||
+    s.planner.hours !== 1 ||
+    s.planner.days !== 14,
+  );
+}
+// A synchronous recovery copy closes the small gap between a UI change and an
+// IndexedDB transaction committing. Remove it only after that exact copy commits.
+export function stagePending(key: string, value: unknown) {
+  try {
+    const json = JSON.stringify(value);
+    localStorage.setItem("dco-pending:" + key, json);
+    return json;
+  } catch {
+    return null;
+  }
+}
+export function readPending<T>(key: string): T | null {
+  try {
+    const json = localStorage.getItem("dco-pending:" + key);
+    return json ? JSON.parse(json) : null;
+  } catch {
+    return null;
+  }
+}
+export function clearPending(key: string, value: unknown) {
+  try {
+    const keyName = "dco-pending:" + key;
+    if (localStorage.getItem(keyName) === JSON.stringify(value))
+      localStorage.removeItem(keyName);
+  } catch {
+    /* IndexedDB remains the durable store if localStorage is unavailable. */
+  }
+}
 export async function readState() {
-  return (await get<State>("dco-academy-v1")) || initial;
+  const pending = readPending<State>("dco-academy-v1");
+  return pending
+    ? parseImport(JSON.stringify(pending))
+    : (await get<State>("dco-academy-v1")) || initial;
 }
 export async function writeState(s: State) {
   await set("dco-academy-v1", s);
+  clearPending("dco-academy-v1", s);
 }
 export function mastery(s: State, domain: string) {
   const a = s.attempts.filter((x) => x.domain === domain).slice(-8);
@@ -89,6 +191,10 @@ export function mastery(s: State, domain: string) {
 }
 export function parseImport(input: string): State {
   const x = JSON.parse(input);
+  if (!x || typeof x !== "object" || Array.isArray(x))
+    throw new Error("Not a valid DCO Academy backup.");
+  if (x.activeStoryId !== undefined && typeof x.activeStoryId !== "string")
+    throw new Error("Backup contains an invalid story selection.");
   if (
     x.version !== 1 ||
     !Array.isArray(x.completed) ||
@@ -188,6 +294,90 @@ export function parseImport(input: string): State {
         )))
   )
     throw new Error("Backup contains invalid learning records.");
+  if (
+    x.hardware !== undefined &&
+    (!object(x.hardware) ||
+      !["CPU", "DIMM", "PSU", "Fans", "Drives", "PCIe"].includes(
+        x.hardware.part,
+      ) ||
+      !(
+        x.hardware.quiz === null ||
+        (Number.isInteger(x.hardware.quiz) &&
+          x.hardware.quiz >= 0 &&
+          x.hardware.quiz < 3)
+      ) ||
+      !(x.hardware.result === null || typeof x.hardware.result === "boolean"))
+  )
+    throw new Error("Backup contains an invalid hardware exercise.");
+  if (x.exam !== undefined) {
+    const e = x.exam;
+    const answer = (v: unknown) =>
+      Number.isInteger(v) && Number(v) >= 0 && Number(v) < 3;
+    if (
+      !object(e) ||
+      ![
+        "Diagnostic",
+        "Weak-topic practice",
+        "Mock A",
+        "Mock B",
+        "Mock C",
+      ].includes(e.mode) ||
+      !strings(e.questionIds) ||
+      e.questionIds.length > 35 ||
+      !e.questionIds.every((id: string) => lessonIds.has(id)) ||
+      !Number.isInteger(e.index) ||
+      e.index < 0 ||
+      e.index >= Math.max(1, e.questionIds.length) ||
+      !Array.isArray(e.answers) ||
+      !e.answers.every(answer) ||
+      !(e.choice === null || answer(e.choice)) ||
+      typeof e.feedback !== "boolean" ||
+      typeof e.finished !== "boolean" ||
+      !Number.isFinite(e.startedAt) ||
+      e.answers.length !==
+        (e.questionIds.length ? e.index + (e.feedback ? 1 : 0) : 0) ||
+      (e.feedback && e.choice !== e.answers[e.index]) ||
+      (e.finished && (!e.feedback || e.index !== e.questionIds.length - 1))
+    )
+      throw new Error("Backup contains an invalid practice exam.");
+  }
+  if (x.interviewPractice !== undefined) {
+    const v = x.interviewPractice;
+    if (
+      !object(v) ||
+      !["Behavioral", "Technical", "Principles"].includes(v.mode) ||
+      !object(v.indices) ||
+      ![v.indices.Behavioral, v.indices.Technical].every(
+        (n) => Number.isInteger(n) && n >= 0 && n < 1000,
+      ) ||
+      !object(v.drafts) ||
+      !Object.entries(v.drafts).every(
+        ([key, d]: [string, any]) =>
+          /^(Behavioral|Technical):\d+$/.test(key) &&
+          object(d) &&
+          [d.answer, d.follow, d.followAnswer].every(
+            (t) => typeof t === "string",
+          ) &&
+          strings(d.coaching) &&
+          (d.recorded === undefined || typeof d.recorded === "boolean"),
+      )
+    )
+      throw new Error("Backup contains invalid interview drafts.");
+  }
+  if (
+    x.quizChoices !== undefined &&
+    (!object(x.quizChoices) ||
+      !Object.entries(x.quizChoices).every(
+        ([id, d]: [string, any]) =>
+          lessonIds.has(id) &&
+          object(d) &&
+          (d.choice === null ||
+            (Number.isInteger(d.choice) && d.choice >= 0 && d.choice < 3)) &&
+          typeof d.graded === "boolean" &&
+          (!d.graded || d.choice !== null),
+      ))
+  )
+    throw new Error("Backup contains invalid quiz answers.");
   return { ...initial, ...x };
 }
 export const makeStory = (): Story => ({
@@ -206,24 +396,22 @@ export const makeStory = (): Story => ({
 export function storyFeedback(s: Story) {
   const out: string[] = [];
   if (s.situation.length < 40)
-    out.push("What was the specific context, impact, and constraint?");
+    out.push("What happened, who was affected, and what made it difficult?");
   if (s.task.length < 30) out.push("What were you personally responsible for?");
   if (s.actions.length < 80)
-    out.push("Describe your decisions, alternatives, and specific actions.");
+    out.push("Walk through what you did and why you chose that approach.");
   if (!/\bI\b/i.test(s.actions))
-    out.push("Distinguish your personal contribution from the team’s work.");
+    out.push("Use “I” to explain your part in the team’s work.");
   if (s.result.length < 40)
     out.push(
-      "What observable outcome followed? State measurement limits honestly.",
+      "What changed after your actions? Include numbers if you measured them.",
     );
   if (!s.evidence.trim())
-    out.push(
-      "What supports the result? Add a real observation or verified measurement.",
-    );
+    out.push("What did you see or measure that showed the result?");
   if (s.lesson.length < 30)
     out.push("What did you learn, and what would you change?");
   if (!s.principles.length)
-    out.push("Choose the principles demonstrated by your actual actions.");
+    out.push("Choose the principles that fit what you did.");
   if (
     [s.situation, s.task, s.actions, s.result].join(" ").split(/\s+/).length >
     600
