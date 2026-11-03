@@ -97,7 +97,7 @@ Pushes to `main` run the unit tests, build Vite with the `/dco-academy/` asset b
 
 ### Database configuration
 
-The account UI and sync implementation are ready, but a Supabase project must be provisioned before account saving is available. The Supabase organization selection is required before project creation. No paid project has been authorized.
+Account saving is connected to the DCO Academy project (`rpvowbzopumqgjgyfqbg`) in the DoeApp organization on its Free plan. GitHub Actions has the public browser configuration. The owner-only learning-record policies are applied and security advisors report no findings. The following steps describe recreating the setup on another project.
 
 1. Create a free Supabase project in the selected organization.
 2. Apply `supabase/migrations/20261103041241_create_learning_records.sql` using the SQL editor or the linked Supabase CLI. The migration creates one private snapshot per authenticated user, enables RLS, and grants only own-row select/insert/update access. Anonymous users receive no table privileges. No service-role key is used by the website.
@@ -118,3 +118,10 @@ On the original site, open Data & preferences and export your JSON backup. On th
 ### Additional validation
 
 `cloud-e2e/saving.spec.ts` tests the sign-in, restore, autosave, revision-conflict, offline-recovery, and guest/account separation flows against a mocked API. Start a second development server with test-only public configuration at port 5174, then run `npx playwright test --config playwright.cloud.config.ts`. These browser tests do not replace a live RLS verification after provisioning.
+
+
+### Provisioning verification
+
+The hosted database was checked with two temporary accounts: an owner could save and update a snapshot, a separate sign-in could recover it, another account could not read or modify it, anonymous table access was denied, forged ownership was rejected, and an update with a stale revision made no change. The temporary accounts and records were removed afterward. The checked-in SQL was executed against the new project using the linked CLI; it was not inserted into Supabase migration history by that direct-query operation. For this existing project, do not replay the initial creation SQL as a new migration. New projects can apply it once normally.
+
+Auth uses confirmed email/password accounts and PKCE confirmation/reset links back to the exact GitHub Pages URL. Only the site URL, redirect allowlist, and minimum password length were adjusted; provider secrets were not placed in the frontend. Free-plan usage limits and the default email service restrictions still apply. The `service_role` key was used only in a local verification process to create/delete temporary accounts; it is not committed, passed to GitHub, or shipped to the browser.
