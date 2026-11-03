@@ -15,12 +15,14 @@ import { scenarios } from "./simulation";
 import { mastery, type State } from "./store";
 export function Dashboard({
   state: s,
+  account = false,
   go,
   learn,
   startExam,
   openIncident,
 }: {
   state: State;
+  account?: boolean;
   go: (p: string) => void;
   learn: (id: string) => void;
   startExam: () => void;
@@ -253,7 +255,9 @@ export function Dashboard({
           <section className="panel progress-summary">
             <div className="section-heading">
               <h2>Your progress</h2>
-              <span className="pill">This device</span>
+              <span className="pill">
+                {account ? "Account" : "This device"}
+              </span>
             </div>
             <div className="course-total">
               <strong>
