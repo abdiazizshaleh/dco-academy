@@ -4692,3 +4692,48 @@ footer span:first-child {
     flex-direction: column;
   }
 }
+
+.study-company {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 18px;
+  margin-bottom: 26px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+}
+.study-company label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.study-company select {
+  width: 190px;
+  margin: 0;
+}
+.study-company p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+  margin: 0;
+}
+@media (max-width: 700px) {
+  .study-company {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+    padding: 14px;
+  }
+  .study-company label {
+    justify-content: space-between;
+  }
+  .study-company select {
+    width: 165px;
+    min-width: 0;
+  }
+}

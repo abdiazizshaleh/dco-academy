@@ -290,6 +290,31 @@ test("new account keeps guest work and signing out waits for the final edit", as
   await page
     .getByRole("button", { name: "Close preferences", exact: true })
     .click();
+  const company = page.getByRole("combobox", {
+    name: "Applying to",
+    exact: true,
+  });
+  await company.selectOption("google");
+  await page
+    .getByRole("textbox", { name: "Your response", exact: true })
+    .fill("Google work stays separate from my AWS answer.");
+  await expect.poll(() => record?.state.targetCompany).toBe("google");
+  await expect
+    .poll(
+      () =>
+        record?.state.googleInterviewPractice?.drafts["Behavioral:0"]?.answer,
+    )
+    .toBe("Google work stays separate from my AWS answer.");
+  await page.reload();
+  await expect(company).toHaveValue("google");
+  await expect(
+    page.getByRole("textbox", { name: "Your response", exact: true }),
+  ).toHaveValue("Google work stays separate from my AWS answer.");
+  await company.selectOption("aws");
+  await expect(
+    page.getByRole("textbox", { name: "Your response", exact: true }),
+  ).toHaveValue("This guest answer should come with my new account.");
+  await company.selectOption("google");
   hold = true;
   await page
     .getByRole("textbox", { name: "Your response", exact: true })
@@ -307,9 +332,9 @@ test("new account keeps guest work and signing out waits for the final edit", as
   await expect(
     page.getByRole("button", { name: "Sign in", exact: true }).first(),
   ).toBeVisible();
-  expect(record.state.interviewPractice.drafts["Behavioral:0"].answer).toBe(
-    "The final edit must also reach my account before sign-out.",
-  );
+  expect(
+    record.state.googleInterviewPractice.drafts["Behavioral:0"].answer,
+  ).toBe("The final edit must also reach my account before sign-out.");
   await page
     .getByRole("button", { name: "Close preferences", exact: true })
     .click();

@@ -152,3 +152,11 @@ New-account carryover also recognizes a changed plan start date, theme preferenc
 Career Readiness compares the reviewed AWS Data Center Technician posting with Google’s Data Center Technician III, Hardware Operations posting in Cedar Rapids. The Google card links the exact example, current job search, and official candidate preparation page; its qualifications are not presented as universal requirements. Company level labels are not treated as interchangeable.
 
 The dashboard, course modules, lessons, assessments, planner, and practical labs distinguish AWS/Amazon context from shared AWS/Google study material. Amazon Leadership Principles and the existing principle-based behavioral bank remain explicitly Amazon-specific. Technical interview practice is shared. Story principle tags are optional, and Google has a separate saved application checklist under the existing notes snapshot. Existing AWS checklist keys and all progress records are preserved.
+
+## Saved target company
+
+The Applying to control saves AWS/Amazon or Google with the version-1 learning snapshot. Earlier records default to AWS. Google’s plan prioritizes hardware, boot, Linux, networking, storage, safety, and operations; it omits AWS role vocabulary and Amazon Leadership Principles. The dashboard’s next lesson follows the same module order. AWS keeps the existing plan order and completion IDs. Google plan completion IDs have a separate prefix, so switching companies keeps both checklists.
+
+Interview practice has independent company workspaces. Existing AWS drafts remain in `interviewPractice`; Google drafts use the optional `googleInterviewPractice` field. Google has original role-based behavioral prompts and a technical bank drawn from shared technical modules. Amazon’s Principles tab appears for AWS. Switching company or mode restores the relevant saved answer and follow-up, and completed interview records include an optional company label. No database schema change is needed.
+
+Company-choice validation: 46 unit tests, 13 learner browser journeys, and two account-saving browser journeys. Checks cover company switching, independent drafts and task completion, reloads, backup import/export, account persistence, and phone layout. Static course data is emitted as a separate build chunk.

@@ -34,9 +34,7 @@ test("company context is clear and the Google checklist saves independently", as
   await page
     .getByRole("button", { name: "Practice a technical answer", exact: true })
     .click();
-  await expect(page.locator(".company-note")).toContainText(
-    "Shared · AWS & Google",
-  );
+  await expect(page.locator(".company-note")).toContainText("AWS / Amazon");
   await page.getByRole("button", { name: "Behavioral", exact: true }).click();
   await expect(page.locator(".company-note")).toContainText("AWS / Amazon");
   await page

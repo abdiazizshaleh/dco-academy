@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Terminal,
 } from "lucide-react";
+import { companyModules } from "./companyStudy";
 import { modules, lessons } from "./content";
 import { scenarios } from "./simulation";
 import { mastery, type State } from "./store";
@@ -28,19 +29,21 @@ export function Dashboard({
   startExam: () => void;
   openIncident: (id: string) => void;
 }) {
-  const domains = [...new Set(modules.map((m) => m.domain))];
+  const studyModules = companyModules(s.targetCompany || "aws");
+  const studyLessons = studyModules.flatMap((m) => m.lessons);
+  const domains = [...new Set(studyModules.map((m) => m.domain))];
   const weak = domains
     .filter((d) => mastery(s, d) !== null)
     .sort((a, b) => mastery(s, a)! - mastery(s, b)!);
   const next =
     (weak.length && mastery(s, weak[0])! < 70
-      ? modules
+      ? studyModules
           .filter((m) => m.domain === weak[0])
           .flatMap((m) => m.lessons)
           .find((l) => !s.completed.includes(l.id))
       : null) ||
-    lessons.find((l) => !s.completed.includes(l.id)) ||
-    lessons[0];
+    studyLessons.find((l) => !s.completed.includes(l.id)) ||
+    studyLessons[0];
   const active = scenarios.find(
     (sc) =>
       s.labs[sc.id] && !s.labs[sc.id].closed && s.labs[sc.id].history.length,
@@ -233,7 +236,7 @@ export function Dashboard({
             </button>
           </div>
           <div className="home-course-list">
-            {modules.slice(0, 4).map((m) => (
+            {studyModules.slice(0, 4).map((m) => (
               <button
                 key={m.id}
                 className="module-row"
