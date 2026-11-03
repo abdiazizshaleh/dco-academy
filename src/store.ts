@@ -1,4 +1,5 @@
 import { get, set } from "idb-keyval";
+import { isTerminalState, terminalLabs } from "./terminal";
 import type { LabState, TerminalState } from "./simulation";
 export type Attempt = {
   id: string;
@@ -27,6 +28,7 @@ export type State = {
   attempts: Attempt[];
   labs: Record<string, LabState>;
   terminal?: TerminalState;
+  terminals?: Record<string, TerminalState>;
   stories: Story[];
   bookmarks: string[];
   notes: Record<string, string>;
@@ -177,16 +179,12 @@ export function parseImport(input: string): State {
         Number.isFinite(v.score) &&
         Number.isFinite(v.at),
     ) ||
-    (x.terminal &&
-      (!object(x.terminal) ||
-        typeof x.terminal.up !== "boolean" ||
-        typeof x.terminal.cwd !== "string" ||
-        !Array.isArray(x.terminal.history) ||
-        !x.terminal.history.every(
-          (v: any) =>
-            object(v) &&
-            typeof v.command === "string" &&
-            typeof v.output === "string",
+    (x.terminal !== undefined && !isTerminalState(x.terminal)) ||
+    (x.terminals !== undefined &&
+      (!object(x.terminals) ||
+        !Object.entries(x.terminals).every(
+          ([key, value]) =>
+            terminalLabs.some((l) => l.id === key) && isTerminalState(value),
         )))
   )
     throw new Error("Backup contains invalid learning records.");

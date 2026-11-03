@@ -27,25 +27,25 @@ Tests cover all 15 incident state machines, unsafe/incomplete actions, terminal 
 
 ## Implemented version
 
-- All 13 navigation sections have functioning content and actions.
+- All 14 navigation sections have functioning content and actions.
 - 16 modules, 35 original lessons, each with explanations, failure modes, diagnostic reasoning, diagram, written activity, knowledge check, interview perspective, and linked research references.
 - 15 fictional incident models with ticket context, three evidence groups, competing causes, scoped actions, verification, notes, history, debrief, and penalty scoring. Restart preserves previous scored attempts.
 - Interactive rack, server component cutaway, network dependency diagram, and optical loss calculator.
-- Stateful bounded Linux interpreter with a network restoration mission and read-only command snapshots. It never runs a host shell or sends network packets.
+- A stateful virtual Linux host with four exercises: interface recovery, DNS repair, disk-space recovery, and SSH service repair. It includes a virtual filesystem, scoped changes, common command flags, text pipelines, and output redirection. It never runs a host shell or sends network packets.
 - 35 distinct multiple-choice checks, diagnostic assessment, weak-topic practice, three overlapping mock sets, and spaced review.
 - All 16 Leadership Principles, 50 original behavioral prompts and 70 original technical prompts. Scripted follow-up and deterministic structural feedback, explicitly labeled as estimates.
 - STAR editor with all requested core fields, principle coverage, evidence questions, rehearsal starts/timers, and experience prompts.
 - 14-day, 30-day, and 60-session self-paced plans; daily time budget, reference target date, task persistence, and overdue/carry-forward labels.
 - IndexedDB persistence, JSON export/import with structural validation, local reset, bookmarks, lesson notes, dark/light themes, and responsive navigation.
-- 20 research entries and a source-analysis report. Community anecdotes and fictional examples are distinguished from official/vendor documentation.
+- 28 research entries and a source-analysis report. Community anecdotes and fictional examples are distinguished from official/vendor documentation.
 
 ## Scope and limitations
 
-This is a coherent working first release, not the full requested final inventory. It does not yet include 60 lessons, 150 unique questions, 20 distinct labs, 100 glossary entries, 75 technical prompts, or 15 different technical diagrams. Mock sets reuse the 35 checks. There is no separate glossary encyclopedia yet; searchable lessons form the current reference library.
+This is a coherent working first release, not the full requested final inventory. It does not yet include 60 lessons, 150 unique questions, 75 technical prompts, or 15 different technical diagrams. Mock sets reuse the 35 checks. The glossary has 146 entries; practical work includes 15 incident models, four Linux exercises, and component-identification practice.
 
 Foundation/Technician/Deep Dive use the same core explanation with progressive mechanism visibility and a deeper reasoning exercise; they are not three independently authored courses. Some modules need further dedicated lessons to reach the requested depth. General platform examples must always yield to the actual equipment service manual. Some source references support only a subset of a lesson; the research report records applicability.
 
-The terminal is a bounded teaching interpreter, not an emulator. Many command outputs are fixed snapshots. Only administrative link state and working directory change; pipes, general shell expressions, arbitrary hosts, and unsafe writes are unsupported. Command-specific exercises beyond the network mission require expansion.
+The terminal is a bounded teaching interpreter, not an operating-system emulator. Its virtual files, approved interface/DNS/archive/SSH changes, command history, and observation-based exercise checks persist separately for each lab. It supports simple quoting, pipelines, `;`, `&&`, output redirection, file paths, common read commands, and scoped edits. It does not implement a complete Bash grammar, arbitrary programs, external network access, interactive top/less sessions, job control, full regular expressions, or the whole Linux permission and process model. Output and workspace content are bounded to keep saved records manageable. Inspect `man COMMAND` in the terminal for supported forms.
 
 Incident causes are deterministic; they do not randomize faults or emulate full devices. The current reasoning gate requires all three evidence groups. Repeated guesses accumulate penalties. Handoff checks enforce length, not semantic correctness. Rebuild and hardware repair outcomes are simulated after an approved action; no real timing or physical execution is modeled. No proprietary AWS architecture, procedure, or question bank is claimed.
 
@@ -58,7 +58,10 @@ The GitHub Pages website is public. Signed-out work stays in the current browser
 ## Source structure
 
 - `src/content.ts`: curriculum, knowledge checks, principles, prompt banks
-- `src/simulation.ts`: deterministic incident and terminal engines, independent of React
+- `src/simulation.ts`: incident scenarios and state machine
+- `src/terminal.ts`: virtual filesystem, command interpreter, and Linux lab grading
+- `src/TerminalLab.tsx`: terminal workspace, separate lab sessions, hints, and checklists
+- `src/glossary.ts` and `src/GlossaryView.tsx`: 146-entry reference data, search, bookmarks, notes, and lesson links
 - `src/store.ts`: typed records, IndexedDB I/O, mastery scoring, backup validation, story feedback
 - `src/Diagram.tsx`: equipment images, interactive component labels, identification practice, and network device drawings
 - `src/main.tsx`: application shell and feature screens
@@ -125,3 +128,12 @@ On the original site, open Data & preferences and export your JSON backup. On th
 The hosted database was checked with two temporary accounts: an owner could save and update a snapshot, a separate sign-in could recover it, another account could not read or modify it, anonymous table access was denied, forged ownership was rejected, and an update with a stale revision made no change. The temporary accounts and records were removed afterward. The checked-in SQL was executed against the new project using the linked CLI; it was not inserted into Supabase migration history by that direct-query operation. For this existing project, do not replay the initial creation SQL as a new migration. New projects can apply it once normally.
 
 Auth uses confirmed email/password accounts and PKCE confirmation/reset links back to the exact GitHub Pages URL. Only the site URL, redirect allowlist, and minimum password length were adjusted; provider secrets were not placed in the frontend. Free-plan usage limits and the default email service restrictions still apply. The `service_role` key was used only in a local verification process to create/delete temporary accounts; it is not committed, passed to GitHub, or shipped to the browser.
+
+
+## Glossary and Linux refinement
+
+The glossary has its own navigation entry, full-text/acronym search, six topic filters, an A-Z filter, saved terms, examples, common mix-ups, related terms, and links to lessons and primary/vendor references. Term IDs have stable hash URLs. Glossary notes and bookmarks are part of the existing learning snapshot and save to the account when signed in. Resource search includes glossary results, including bookmarked terms.
+
+Each Linux exercise keeps a separate host state under the existing version-1 learning record. Earlier single-host terminal records remain readable. Completion depends on collected observations, the actual repaired state, and subsequent verification, rather than clicking a button or matching a command string. Changing a configuration affects later reads and diagnostics. Clearing visible output keeps host state and command recall. Restarting one lab does not remove the other lab sessions or scored attempts.
+
+Current checks: 39 unit tests plus eight browser tests, covering the earlier learner journeys, all four terminal solutions, filesystem/text operations, accurate journal filtering and ping counts, glossary lookup/notes/bookmarks, JSON round trips, separate lab persistence, hash navigation, and mobile layout. The original Sites URL is kept in sync with GitHub Pages using the same app source and database, while retaining its existing private access policy.

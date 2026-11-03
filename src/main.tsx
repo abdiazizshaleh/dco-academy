@@ -5,6 +5,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   BookOpen,
+  Library,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -40,33 +41,29 @@ import {
   technicalPrompts,
   type Lesson,
 } from "./content";
-import {
-  scenarios,
-  actLab,
-  freshLab,
-  freshTerminal,
-  runCommand,
-} from "./simulation";
+import { scenarios, actLab, freshLab } from "./simulation";
 import {
   initial,
-  readState,
-  writeState,
   mastery,
   makeStory,
   storyFeedback,
   parseImport,
-  type State,
   type Story,
 } from "./store";
 import { Rack, Topology, Server } from "./Diagram";
 import { Dashboard } from "./Dashboard";
 import sources from "../research/sources.json";
 import "./style.css";
+import { Glossary } from "./GlossaryView";
+import { glossary, searchGlossary } from "./glossary";
+import { TerminalLab } from "./TerminalLab";
+import { freshTerminal } from "./terminal";
 import { useLearningState } from "./useLearningState";
 import { CloudAccount } from "./CloudAccount";
 const nav = [
   ["Dashboard", LayoutDashboard],
   ["Learning Path", BookOpen],
+  ["Glossary", Library],
   ["Data Center Explorer", ServerIcon],
   ["Hardware Lab", FlaskConical],
   ["Network & Fiber Lab", Network],
@@ -108,6 +105,9 @@ function readRoute() {
   const params = new URLSearchParams(query);
   return {
     page: nav.find(([name]) => pageSlug(name) === path)?.[0] || "Dashboard",
+    termId: glossary.some((e) => e.id === params.get("term"))
+      ? params.get("term")
+      : null,
     lessonId: lessons.some((l) => l.id === params.get("lesson"))
       ? params.get("lesson")
       : null,
@@ -120,15 +120,18 @@ function routeUrl(
   page: string,
   lesson: string | null = null,
   incident?: string,
+  term?: string | null,
 ) {
   return (
     "#/" +
     pageSlug(page) +
-    (lesson
-      ? "?lesson=" + lesson
-      : page === "Incident Simulator" && incident
-        ? "?incident=" + incident
-        : "")
+    (page === "Glossary" && term
+      ? "?term=" + term
+      : lesson
+        ? "?lesson=" + lesson
+        : page === "Incident Simulator" && incident
+          ? "?incident=" + incident
+          : "")
   );
 }
 const initialRoute = readRoute();
@@ -142,14 +145,13 @@ function App() {
   } = learningStore;
   const [page, P] = useState<string>(initialRoute.page);
   const [lessonId, LI] = useState<string | null>(initialRoute.lessonId);
+  const [termId, TI] = useState<string | null>(initialRoute.termId);
   const [mobile, M] = useState(false);
   const [toast, T] = useState("");
   const [query, Q] = useState("");
   const [filter, F] = useState("All");
   const [modal, MO] = useState(false);
   const [scenarioId, SI] = useState(initialRoute.scenarioId);
-  const [command, C] = useState("");
-  const [commandIndex, CI] = useState(-1);
   const [incidentFilter, IF] = useState("All");
   const [storyId, ST] = useState("");
   const [examMode, EM] = useState("Diagnostic");
@@ -174,7 +176,6 @@ function App() {
   const [budget, BU] = useState(8);
   const [explore, EX] = useState("Rack");
   const inputFile = useRef<HTMLInputElement>(null);
-  const terminalEnd = useRef<HTMLDivElement>(null);
   useEffect(() => {
     document.documentElement.dataset.theme = s.theme;
   }, [s.theme]);
@@ -188,13 +189,20 @@ function App() {
       return () => clearTimeout(id);
     }
   }, [toast]);
-  useEffect(() => {
-    terminalEnd.current?.scrollIntoView({ block: "nearest" });
-  }, [s.terminal?.history.length]);
   function go(p: string) {
     history.pushState(null, "", routeUrl(p, null, scenarioId));
     P(p);
     LI(null);
+    M(false);
+    Q("");
+    F("All");
+    window.scrollTo(0, 0);
+  }
+  function openTerm(id: string) {
+    history.pushState(null, "", routeUrl("Glossary", null, undefined, id));
+    P("Glossary");
+    LI(null);
+    TI(id);
     M(false);
     Q("");
     F("All");
@@ -215,14 +223,19 @@ function App() {
       P(r.page);
       LI(r.lessonId);
       SI(r.scenarioId);
+      TI(r.termId);
       M(false);
     };
     window.addEventListener("popstate", back);
     return () => window.removeEventListener("popstate", back);
   }, []);
   useEffect(() => {
-    history.replaceState(null, "", routeUrl(page, lessonId, scenarioId));
-  }, [page, lessonId, scenarioId]);
+    history.replaceState(
+      null,
+      "",
+      routeUrl(page, lessonId, scenarioId, termId),
+    );
+  }, [page, lessonId, scenarioId, termId]);
   useEffect(() => {
     const search = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -312,8 +325,10 @@ function App() {
   const mod = modules.find((m) => m.lessons.some((l) => l.id === lessonId));
   const scenario = scenarios.find((x) => x.id === scenarioId)!;
   const lab = s.labs[scenarioId] || freshLab();
-  const term = s.terminal || freshTerminal();
   const story = s.stories.find((x) => x.id === storyId) || s.stories[0];
+  const resourceTerms = searchGlossary(query).filter(
+    (e) => filter !== "Bookmarks" || s.bookmarks.includes("term:" + e.id),
+  );
   const due = lessons.filter((l) => s.reviews[l.id]?.due <= Date.now());
   function labAction(action: string, value?: number | string) {
     const n = actLab(lab, scenario, action, value);
@@ -485,10 +500,10 @@ function App() {
         <nav>
           {nav.map(([n, Icon], i) => (
             <React.Fragment key={n}>
-              {i === 2 && (
+              {n === "Data Center Explorer" && (
                 <small className="nav-label divider">HANDS-ON LABS</small>
               )}
-              {i === 7 && (
+              {n === "Interview Academy" && (
                 <small className="nav-label divider">
                   INTERVIEW & PROGRESS
                 </small>
@@ -600,6 +615,26 @@ function App() {
                 go("Incident Simulator");
               }}
             />
+          )}
+          {page === "Glossary" && (
+            <>
+              <PageTitle
+                eyebrow="Reference"
+                title="Glossary"
+                description="Look up a term, check an example, and connect it to what you’re learning."
+              />
+              <Glossary
+                selectedId={termId}
+                onSelect={TI}
+                bookmarks={s.bookmarks}
+                onBookmark={bookmark}
+                notes={s.notes}
+                onNote={(id, text) =>
+                  S((p) => ({ ...p, notes: { ...p.notes, [id]: text } }))
+                }
+                onLesson={learn}
+              />
+            </>
           )}
           {page === "Learning Path" && (
             <>
@@ -751,6 +786,18 @@ function App() {
                         </button>
                       </div>
                       <div className="panel">
+                        <h3>Key terms</h3>
+                        <div className="lesson-key-terms">
+                          {glossary
+                            .filter((e) => e.lessonId === currentLesson.id)
+                            .slice(0, 8)
+                            .map((e) => (
+                              <button key={e.id} onClick={() => openTerm(e.id)}>
+                                {e.term}
+                                <ArrowUpRight size={12} />
+                              </button>
+                            ))}
+                        </div>
                         <h3>Apply what you learned</h3>
                         <button
                           className="list-button"
@@ -1085,187 +1132,31 @@ function App() {
               <PageTitle
                 eyebrow="Linux lab"
                 title="Linux terminal"
-                description="A practice server with a network fault. Commands run in the simulation, not on your computer."
+                description="Work through a fault on a practice host. Commands change its files, network state, and services, so you can test your diagnosis."
               />
-              <div className="lesson-layout">
-                <section>
-                  <div className="terminal-window">
-                    <div className="terminal-bar">
-                      <span>
-                        <i />
-                        <i />
-                        <i />
-                      </span>
-                      <span>learner@dco-lab: {term.cwd}</span>
-                      <button
-                        className="text-button"
-                        onClick={() =>
-                          S((p) => ({ ...p, terminal: freshTerminal() }))
-                        }
-                      >
-                        Reset host
-                      </button>
-                    </div>
-                    <div className="terminal-output">
-                      <p className="terminal-intro">
-                        DCO Academy training host
-                        <br />
-                        Mission: diagnose why eno1 cannot reach its gateway.
-                        <br />
-                        You have approval to enable eno1 after checking its
-                        state.
-                        <br />
-                        Type help to see the available commands.
-                      </p>
-                      {term.history.map((h, i) => (
-                        <div key={i}>
-                          <div>
-                            <span className="green-text">learner@dco-lab</span>
-                            <span className="muted">:$ </span>
-                            {h.command}
-                          </div>
-                          <pre>{h.output}</pre>
-                        </div>
-                      ))}
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          if (command.trim()) {
-                            S((p) => ({
-                              ...p,
-                              terminal: runCommand(
-                                p.terminal || freshTerminal(),
-                                command,
-                              ),
-                            }));
-                            C("");
-                            CI(-1);
-                          }
-                        }}
-                      >
-                        <label className="green-text" htmlFor="command">
-                          $
-                        </label>
-                        <input
-                          id="command"
-                          aria-label="Terminal command"
-                          autoComplete="off"
-                          spellCheck={false}
-                          value={command}
-                          onChange={(e) => C(e.target.value)}
-                          onKeyDown={(e) => {
-                            const h = term.history;
-                            if (e.key === "ArrowUp") {
-                              e.preventDefault();
-                              const n = Math.min(
-                                commandIndex + 1,
-                                h.length - 1,
-                              );
-                              CI(n);
-                              C(h[h.length - 1 - n]?.command || "");
-                            }
-                            if (e.key === "ArrowDown") {
-                              e.preventDefault();
-                              const n = Math.max(-1, commandIndex - 1);
-                              CI(n);
-                              C(
-                                n < 0 ? "" : h[h.length - 1 - n]?.command || "",
-                              );
-                            }
-                            if (e.key === "Tab") {
-                              e.preventDefault();
-                              const supported = [
-                                "ip link",
-                                "ip addr",
-                                "ip route",
-                                "ethtool eno1",
-                                "journalctl -u NetworkManager",
-                                "ping 10.120.0.1",
-                                "sudo ip link set eno1 up",
-                              ];
-                              const matches = supported.filter((x) =>
-                                x.startsWith(command),
-                              );
-                              if (matches.length === 1) C(matches[0]);
-                            }
-                          }}
-                        />
-                      </form>
-                      <div ref={terminalEnd} />
-                    </div>
-                  </div>
-                  <button
-                    className="button primary spaced"
-                    onClick={() => {
-                      const h = term.history.map((x) => x.command);
-                      if (
-                        term.up &&
-                        h.some(
-                          (x) => x === "ip link" || x === "ip link show",
-                        ) &&
-                        h.includes("ip route") &&
-                        term.history.some(
-                          (x) =>
-                            x.command === "ping 10.120.0.1" &&
-                            x.output.includes("0% packet loss"),
-                        )
-                      ) {
-                        attempt("terminal-network", "Linux", 100, "terminal");
-                        T("The gateway is reachable. Lab completed.");
-                      } else
-                        T(
-                          "Check ip link and ip route, enable eno1, then ping 10.120.0.1.",
-                        );
-                    }}
-                  >
-                    Verify the challenge <CheckCircle2 size={16} />
-                  </button>
-                </section>
-                <aside className="panel lesson-aside">
-                  <h3>Start with these checks</h3>
-                  <p className="muted small-text">
-                    Select a command to put it in the terminal. Use ↑ and ↓ for
-                    history and Tab to complete a command.
-                  </p>
-                  <div className="command-shortcuts">
-                    {[
-                      "ip link",
-                      "ip addr",
-                      "ip route",
-                      "ethtool eno1",
-                      "journalctl -u NetworkManager",
-                    ].map((cmd) => (
-                      <button
-                        key={cmd}
-                        onClick={() => {
-                          C(cmd);
-                          document.getElementById("command")?.focus();
-                        }}
-                      >
-                        <code>{cmd}</code>
-                        <ChevronRight size={14} />
-                      </button>
-                    ))}
-                  </div>
-                  {[
-                    "Inspect administrative and carrier state: ip link",
-                    "Read addressing: ip addr",
-                    "Find the next hop: ip route",
-                    "Check link details: ethtool eno1",
-                    "Read events: journalctl -u NetworkManager",
-                    "Apply scoped change only after evidence",
-                    "Verify gateway reachability with ping",
-                  ].map((x, i) => (
-                    <p key={x} className="checklist-item">
-                      <span>{i + 1}</span>
-                      {x}
-                    </p>
-                  ))}
-                  <button className="text-button" onClick={() => learn("8-1")}>
-                    Read the Linux lesson <ArrowRight size={14} />
-                  </button>
-                </aside>
-              </div>
+              <TerminalLab
+                state={s.terminal}
+                sessions={s.terminals}
+                onChange={(terminal) =>
+                  S((p) => ({
+                    ...p,
+                    terminal,
+                    terminals: {
+                      ...p.terminals,
+                      [terminal.labId || "network"]: terminal,
+                    },
+                  }))
+                }
+                onChoose={(id) =>
+                  S((p) => ({
+                    ...p,
+                    terminal: p.terminals?.[id] || freshTerminal(id),
+                  }))
+                }
+                onComplete={(id) => {
+                  attempt("terminal-" + id, "Linux", 100, "terminal");
+                }}
+              />
             </>
           )}
           {page === "Incident Simulator" && (
@@ -2341,6 +2232,7 @@ function App() {
                   {[
                     "All",
                     "Lessons",
+                    "Glossary",
                     "Sources",
                     "Bookmarks",
                     "official",
@@ -2403,6 +2295,37 @@ function App() {
                       )
                       .map((sc) => sc.id)}
                   />
+                </section>
+              )}
+              {["All", "Glossary", "Bookmarks"].includes(filter) && (
+                <section className="panel spaced">
+                  <div className="section-heading">
+                    <h2>Glossary</h2>
+                    <button
+                      className="text-button"
+                      onClick={() => go("Glossary")}
+                    >
+                      Browse all {glossary.length} terms{" "}
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                  {resourceTerms.length ? (
+                    <div className="resource-terms">
+                      {resourceTerms.slice(0, query ? 12 : 6).map((e) => (
+                        <button key={e.id} onClick={() => openTerm(e.id)}>
+                          <div>
+                            <b>{e.term}</b>
+                            <p>{e.definition}</p>
+                          </div>
+                          <ArrowRight size={16} />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="muted">
+                      No glossary terms match this search.
+                    </p>
+                  )}
                 </section>
               )}
               {["All", "Lessons", "Bookmarks"].includes(filter) && (
