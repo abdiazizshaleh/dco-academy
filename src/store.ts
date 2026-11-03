@@ -415,8 +415,6 @@ export function storyFeedback(s: Story) {
     out.push("What did you see or measure that showed the result?");
   if (s.lesson.length < 30)
     out.push("What did you learn, and what would you change?");
-  if (!s.principles.length)
-    out.push("Choose the principles that fit what you did.");
   if (
     [s.situation, s.task, s.actions, s.result].join(" ").split(/\s+/).length >
     600

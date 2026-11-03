@@ -56,6 +56,7 @@ import {
   type Story,
 } from "./store";
 import { Rack, Topology, Server } from "./Diagram";
+import { RoleGuide, CompanyNote, companyScope } from "./RoleGuide";
 import { Dashboard } from "./Dashboard";
 import sources from "../research/sources.json";
 import "./style.css";
@@ -725,6 +726,18 @@ function App() {
           </div>
         </header>
         <main id="main" tabIndex={-1}>
+          {[
+            "Data Center Explorer",
+            "Hardware Lab",
+            "Network & Fiber Lab",
+            "Linux Terminal",
+            "Incident Simulator",
+          ].includes(page) && (
+            <p className="shared-lab-label">
+              <span className="pill">Shared · AWS & Google</span> General
+              technical practice. These simulations are not company runbooks.
+            </p>
+          )}
           {saveError && (
             <div role="alert" className="error-banner">
               {saveError}
@@ -787,6 +800,7 @@ function App() {
                       <span className="pill">
                         MODULE {mod.id} · {mod.domain}
                       </span>
+                      <CompanyNote moduleId={mod.id} />
                       <h2>{currentLesson.title}</h2>
                       <LessonBody
                         key={"body:" + currentLesson.id}
@@ -885,7 +899,7 @@ function App() {
                       <p className="muted">
                         These references support the underlying concepts. The
                         examples and diagnostic sequences above are academy
-                        instruction, not internal AWS procedures.
+                        instruction, not internal AWS or Google procedures.
                       </p>
                       <SourceList
                         ids={[
@@ -1039,6 +1053,9 @@ function App() {
                             </span>
                             <span className="pill">{m.domain}</span>
                           </div>
+                          <span className="company-label">
+                            {companyScope(m.id)}
+                          </span>
                           <h2>{m.title}</h2>
                           <p className="muted">{m.description}</p>
                           <small className="muted">
@@ -1592,6 +1609,24 @@ function App() {
                 title="Talk through your answer"
                 description="Practice a question, answer a follow-up, and get feedback on your answer’s structure."
               />
+              <div className="company-note">
+                <span className="pill">
+                  {interviewMode === "Technical"
+                    ? "Shared · AWS & Google"
+                    : "AWS / Amazon"}
+                </span>
+                <p>
+                  {interviewMode === "Technical"
+                    ? "Use these original troubleshooting prompts for either company. They are practice exercises, not official interview questions."
+                    : "The behavioral prompts and Principles tab use Amazon’s Leadership Principles. For Google, use the role guide and shared technical practice."}
+                </p>
+                <button
+                  className="text-button"
+                  onClick={() => go("Career Readiness")}
+                >
+                  Compare AWS and Google <ArrowRight size={14} />
+                </button>
+              </div>
               <div className="tabs">
                 {["Behavioral", "Technical", "Principles"].map((t) => (
                   <button
@@ -1762,7 +1797,13 @@ function App() {
                       These are practice questions. Your recruiter can confirm
                       what to expect in your interview.
                     </p>
-                    <SourceList ids={["aws-lp", "aws-interview"]} />
+                    <SourceList
+                      ids={
+                        interviewMode === "Technical"
+                          ? ["aws-interview", "google-dct", "google-interview"]
+                          : ["aws-lp", "aws-interview"]
+                      }
+                    />
                   </aside>
                 </div>
               )}
@@ -1877,7 +1918,7 @@ function App() {
                       examples as you practice.
                     </p>
                   )}
-                  <h3 className="spaced">Principle coverage</h3>
+                  <h3 className="spaced">Amazon principle coverage</h3>
                   {principles.map((p) => (
                     <div className="coverage" key={p}>
                       <span>{p}</span>
@@ -1936,7 +1977,11 @@ function App() {
                         </label>
                       ))}
                     </div>
-                    <h3>Principles demonstrated</h3>
+                    <h3>Amazon Leadership Principles (optional)</h3>
+                    <p className="muted small-text">
+                      Use these tags for Amazon/AWS preparation. Your story can
+                      also be used for Google without a principle tag.
+                    </p>
                     <div className="chips">
                       {principles.map((p) => (
                         <button
@@ -2071,6 +2116,13 @@ function App() {
                     Your answers save as you go. Leave this page and return here
                     to continue.
                   </p>
+                  <small className="company-label">
+                    {companyScope(
+                      modules.find((m) =>
+                        m.lessons.includes(examQuestions[examIndex]),
+                      )!.id,
+                    )}
+                  </small>
                   <h2>{examQuestions[examIndex].question}</h2>
                   <div className="answer-options">
                     {examQuestions[examIndex].options.map((o, i) => (
@@ -2355,6 +2407,9 @@ function App() {
                           day: "numeric",
                         })}
                       </span>
+                      <small className="company-label">
+                        {companyScope(m.id)}
+                      </small>
                       <h3>{m.title}</h3>
                       {overdue &&
                         ![0, 1, 2].every((n) =>
@@ -2569,6 +2624,11 @@ function App() {
                         <span className="eyebrow">
                           {modules.find((m) => m.lessons.includes(l))?.domain}
                         </span>
+                        <small className="company-label">
+                          {companyScope(
+                            modules.find((m) => m.lessons.includes(l))!.id,
+                          )}
+                        </small>
                         <h3>{l.title}</h3>
                         <p className="muted">{l.concept}</p>
                         <div className="section-heading">
@@ -2610,7 +2670,18 @@ function App() {
                 title="Get ready to apply"
                 description="Compare the role with your experience and keep track of what you still need to prepare."
               />
-              <div className="two-cards">
+              <RoleGuide
+                notes={s.notes}
+                onNote={(key, value) =>
+                  S((p) => ({ ...p, notes: { ...p.notes, [key]: value } }))
+                }
+                onLesson={learn}
+                onInterview={() => {
+                  IM("Technical");
+                  go("Interview Academy");
+                }}
+              />
+              <div className="two-cards spaced">
                 <section className="panel">
                   <h2>Experience you can build on</h2>
                   <p>
@@ -2638,13 +2709,14 @@ function App() {
                   </button>
                 </section>
                 <section className="panel">
-                  <h2>Application readiness checklist</h2>
+                  <span className="pill company-aws">AWS / Amazon</span>
+                  <h2>AWS application checklist</h2>
                   {[
                     "Read the specific current job posting and location requirements",
                     "Match the requirements to examples from your work or study",
                     "Ask the recruiter about level, shifts, and loop format",
                     "Write up a lab project and make clear that it was a simulation",
-                    "Review the 16 Leadership Principles and practice your own stories",
+                    "AWS / Amazon: review the 16 Leadership Principles and practice your own stories",
                     "Practice optics, Linux, and safe physical troubleshooting",
                     "Confirm interview time zone, format, location or meeting link, and recruiter contact",
                     "Test microphone, webcam, connection, and backup communication plan",
@@ -2699,7 +2771,8 @@ function App() {
               operations training
             </span>
             <span>
-              Independent of Amazon and AWS · Sign in to save across devices
+              Independent of Amazon, AWS, and Google · Sign in to save across
+              devices
             </span>
           </footer>
         </main>
