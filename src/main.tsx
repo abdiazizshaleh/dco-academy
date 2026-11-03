@@ -37,8 +37,6 @@ import {
   lessons,
   principles,
   principleNotes,
-  behavioralPrompts,
-  technicalPrompts,
   type Lesson,
 } from "./content";
 import { scenarios, actLab, freshLab } from "./simulation";
@@ -56,6 +54,13 @@ import {
   type Story,
 } from "./store";
 import { Rack, Topology, Server } from "./Diagram";
+import { CompanyPicker } from "./CompanyPicker";
+import {
+  companyNames,
+  companyModules,
+  interviewPrompts,
+  planTaskId,
+} from "./companyStudy";
 import { RoleGuide, CompanyNote, companyScope } from "./RoleGuide";
 import { Dashboard } from "./Dashboard";
 import sources from "../research/sources.json";
@@ -149,6 +154,10 @@ function App() {
     ready: loaded,
     error: saveError,
   } = learningStore;
+  const company = s.targetCompany || "aws";
+  const planModules = companyModules(company);
+  const practiceKey =
+    company === "google" ? "googleInterviewPractice" : "interviewPractice";
   const [page, P] = useState<string>(initialRoute.page);
   const [lessonId, LI] = useState<string | null>(initialRoute.lessonId);
   const [termId, TI] = useState<string | null>(initialRoute.termId);
@@ -203,11 +212,15 @@ function App() {
     ED = (v: boolean) => examField("finished", v),
     ES = (v: number) => examField("startedAt", v);
   const [tick, Tick] = useState(Date.now());
-  const practice = s.interviewPractice || emptyInterview;
-  const interviewMode = practice.mode;
+  const practice = s[practiceKey] || emptyInterview;
+  const interviewMode =
+    company === "google" && practice.mode === "Principles"
+      ? "Behavioral"
+      : practice.mode;
   const practiceMode =
     interviewMode === "Technical" ? "Technical" : "Behavioral";
   const questionIndex = practice.indices[practiceMode];
+  const practiceBank = interviewPrompts(company, practiceMode);
   const draftKey = `${practiceMode}:${questionIndex}`;
   const draft = practice.drafts[draftKey] || {
     answer: "",
@@ -224,7 +237,7 @@ function App() {
     value: InterviewDraft[K],
   ) {
     S((p) => {
-      const v = p.interviewPractice || emptyInterview;
+      const v = p[practiceKey] || emptyInterview;
       const d = v.drafts[draftKey] || {
         answer: "",
         follow: "",
@@ -233,7 +246,7 @@ function App() {
       };
       return {
         ...p,
-        interviewPractice: {
+        [practiceKey]: {
           ...v,
           drafts: { ...v.drafts, [draftKey]: { ...d, [key]: value } },
         },
@@ -243,14 +256,14 @@ function App() {
   const IM = (mode: InterviewPractice["mode"]) =>
     S((p) => ({
       ...p,
-      interviewPractice: { ...(p.interviewPractice || emptyInterview), mode },
+      [practiceKey]: { ...(p[practiceKey] || emptyInterview), mode },
     }));
   const QI = (value: React.SetStateAction<number>) =>
     S((p) => {
-      const v = p.interviewPractice || emptyInterview;
+      const v = p[practiceKey] || emptyInterview;
       return {
         ...p,
-        interviewPractice: {
+        [practiceKey]: {
           ...v,
           indices: {
             ...v.indices,
@@ -534,8 +547,7 @@ function App() {
             "Your answer explains your role, decisions, and outcome. A reviewer can help you check the technical details and trim anything unclear.",
           ],
     );
-    const bank =
-      interviewMode === "Technical" ? technicalPrompts : behavioralPrompts;
+    const bank = practiceBank;
     const score = Math.max(0, 100 - flags.length * 20);
     if (draft.recorded) return;
     interviewField("recorded", true);
@@ -545,6 +557,7 @@ function App() {
         ...p.interviews,
         {
           question: bank[questionIndex % bank.length],
+          company,
           answer,
           followup: followAnswer,
           score,
@@ -726,6 +739,11 @@ function App() {
           </div>
         </header>
         <main id="main" tabIndex={-1}>
+          <CompanyPicker
+            value={company}
+            onChange={(targetCompany) => S((p) => ({ ...p, targetCompany }))}
+          />
+
           {[
             "Data Center Explorer",
             "Hardware Lab",
@@ -1611,14 +1629,15 @@ function App() {
               />
               <div className="company-note">
                 <span className="pill">
+                  {companyNames[company]} ·{" "}
                   {interviewMode === "Technical"
-                    ? "Shared · AWS & Google"
-                    : "AWS / Amazon"}
+                    ? "Technical practice"
+                    : "Interview practice"}
                 </span>
                 <p>
-                  {interviewMode === "Technical"
-                    ? "Use these original troubleshooting prompts for either company. They are practice exercises, not official interview questions."
-                    : "The behavioral prompts and Principles tab use Amazon’s Leadership Principles. For Google, use the role guide and shared technical practice."}
+                  {company === "google"
+                    ? "Practice hardware, operating-system, network, and teamwork examples for your Google application. These are original rehearsal questions based on the role guide."
+                    : "Behavioral questions use Amazon’s Leadership Principles. Technical questions help you explain your diagnosis, decisions, and verification."}
                 </p>
                 <button
                   className="text-button"
@@ -1628,7 +1647,10 @@ function App() {
                 </button>
               </div>
               <div className="tabs">
-                {["Behavioral", "Technical", "Principles"].map((t) => (
+                {(company === "google"
+                  ? ["Behavioral", "Technical"]
+                  : ["Behavioral", "Technical", "Principles"]
+                ).map((t) => (
                   <button
                     className={interviewMode === t ? "selected" : ""}
                     key={t}
@@ -1681,19 +1703,7 @@ function App() {
                       {interviewMode.toUpperCase()} PRACTICE ·{" "}
                       {questionIndex + 1}
                     </span>
-                    <h2>
-                      {
-                        (interviewMode === "Technical"
-                          ? technicalPrompts
-                          : behavioralPrompts)[
-                          questionIndex %
-                            (interviewMode === "Technical"
-                              ? technicalPrompts
-                              : behavioralPrompts
-                            ).length
-                        ]
-                      }
-                    </h2>
+                    <h2>{practiceBank[questionIndex % practiceBank.length]}</h2>
                     <label>
                       Your response
                       <textarea
@@ -1736,13 +1746,7 @@ function App() {
                       <button
                         className="button secondary"
                         onClick={() => {
-                          QI(
-                            (i) =>
-                              (i + 1) %
-                              (practiceMode === "Technical"
-                                ? technicalPrompts.length
-                                : behavioralPrompts.length),
-                          );
+                          QI((i) => (i + 1) % practiceBank.length);
                         }}
                       >
                         Next question
@@ -1799,8 +1803,8 @@ function App() {
                     </p>
                     <SourceList
                       ids={
-                        interviewMode === "Technical"
-                          ? ["aws-interview", "google-dct", "google-interview"]
+                        company === "google"
+                          ? ["google-dct", "google-interview"]
                           : ["aws-lp", "aws-interview"]
                       }
                     />
@@ -2302,6 +2306,12 @@ function App() {
                 description="Choose a pace that fits your week, then check off tasks as you finish them."
               />
               <section className="panel">
+                <h2>{companyNames[company]} study plan</h2>
+                <p className="muted">
+                  {company === "google"
+                    ? "Start with hardware, Linux, and networking, then practice maintenance, media handling, and explaining your work. Behavioral practice uses Google role examples."
+                    : "Build the technical foundation, then work through Amazon Leadership Principles and your own examples."}
+                </p>
                 <div className="input-grid">
                   <label>
                     Pathway
@@ -2387,12 +2397,18 @@ function App() {
               </section>
               <div className="module-grid">
                 {Array.from({ length: s.planner.days }, (_, i) => {
-                  const m = modules[i % modules.length];
+                  const m = planModules[i % planModules.length];
                   const lesson =
                     m.lessons[
-                      Math.floor(i / modules.length) % m.lessons.length
+                      Math.floor(i / planModules.length) % m.lessons.length
                     ];
-                  const sc = scenarios[i % scenarios.length];
+                  const related = scenarios.filter(
+                    (sc) => sc.domain === m.domain,
+                  );
+                  const sc =
+                    company === "google" && related.length
+                      ? related[i % related.length]
+                      : scenarios[i % scenarios.length];
                   const start = new Date(s.planner.start + "T12:00:00");
                   start.setDate(start.getDate() + i);
                   const overdue =
@@ -2414,7 +2430,7 @@ function App() {
                       {overdue &&
                         ![0, 1, 2].every((n) =>
                           s.planner.done.includes(
-                            `${s.planner.start}-${i}-${n}`,
+                            planTaskId(company, s.planner.start, i, n),
                           ),
                         ) && (
                           <span className="pill orange">
@@ -2424,9 +2440,11 @@ function App() {
                       {[
                         `Learn: ${lesson.title}`,
                         `Lab: ${sc.title}`,
-                        "Review a difficult topic and rehearse a story",
+                        company === "google"
+                          ? "Rehearse a Google behavioral example"
+                          : "Review a difficult topic and rehearse a story",
                       ].map((task, j) => {
-                        const id = `${s.planner.start}-${i}-${j}`;
+                        const id = planTaskId(company, s.planner.start, i, j);
                         return (
                           <div className="plan-task" key={id}>
                             <input
@@ -2452,7 +2470,10 @@ function App() {
                                   ? learn(lesson.id)
                                   : j === 1
                                     ? (SI(sc.id), go("Incident Simulator"))
-                                    : go("STAR Story Vault")
+                                    : company === "google"
+                                      ? (IM("Behavioral"),
+                                        go("Interview Academy"))
+                                      : go("STAR Story Vault")
                               }
                             >
                               {task}

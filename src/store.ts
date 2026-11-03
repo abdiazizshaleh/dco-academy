@@ -1,3 +1,4 @@
+import type { TargetCompany } from "./companyStudy";
 import { lessons } from "./content";
 const lessonIds = new Set(lessons.map((l) => l.id));
 import { get, set } from "idb-keyval";
@@ -68,10 +69,12 @@ export type HardwareProgress = {
 export type State = {
   version: 1;
   theme: "dark" | "light";
+  targetCompany?: TargetCompany;
   exam?: ExamDraft;
   hardware?: HardwareProgress;
   optical?: { tx: number; rx: number; budget: number };
   interviewPractice?: InterviewPractice;
+  googleInterviewPractice?: InterviewPractice;
   quizChoices?: Record<string, { choice: number | null; graded: boolean }>;
   completed: string[];
   attempts: Attempt[];
@@ -92,6 +95,7 @@ export type State = {
   reviews: Record<string, { due: number; interval: number }>;
   interviews: {
     question: string;
+    company?: TargetCompany;
     answer: string;
     followup: string;
     score: number;
@@ -119,6 +123,9 @@ export const initial: State = {
 };
 export function hasLearningProgress(s: State) {
   return Boolean(
+    s.targetCompany === "google" ||
+    (s.googleInterviewPractice &&
+      Object.keys(s.googleInterviewPractice.drafts).length) ||
     s.completed.length ||
     s.attempts.length ||
     s.stories.length ||
@@ -285,6 +292,7 @@ export function parseImport(input: string): State {
       (v: any) =>
         object(v) &&
         typeof v.question === "string" &&
+        (v.company === undefined || ["aws", "google"].includes(v.company)) &&
         typeof v.answer === "string" &&
         typeof v.followup === "string" &&
         Number.isFinite(v.score) &&
@@ -346,8 +354,14 @@ export function parseImport(input: string): State {
     )
       throw new Error("Backup contains an invalid practice exam.");
   }
-  if (x.interviewPractice !== undefined) {
-    const v = x.interviewPractice;
+  if (
+    x.targetCompany !== undefined &&
+    !["aws", "google"].includes(x.targetCompany)
+  )
+    throw new Error("Backup contains an invalid target company.");
+  for (const key of ["interviewPractice", "googleInterviewPractice"]) {
+    if (x[key] === undefined) continue;
+    const v = x[key];
     if (
       !object(v) ||
       !["Behavioral", "Technical", "Principles"].includes(v.mode) ||
