@@ -591,6 +591,7 @@ function App() {
           {page === "Dashboard" && (
             <Dashboard
               state={s}
+              account={Boolean(learningStore.user)}
               go={go}
               learn={learn}
               startExam={() => startExam("Diagnostic")}
@@ -2614,23 +2615,35 @@ function App() {
               />
             </div>
             <p className="muted">
-              Import replaces local records with the selected backup.
+              Import replaces the current progress with the selected backup.
+              When you’re signed in, that copy also saves to your account.
             </p>
             <details>
-              <summary>Reset all local learning data</summary>
+              <summary>
+                {learningStore.user
+                  ? "Reset account progress"
+                  : "Reset browser progress"}
+              </summary>
               <p>
-                Export a backup first. This clears progress and personal stories
-                from this browser.
+                {learningStore.user
+                  ? "This clears the lessons, notes, stories, and practice history saved to this account. The change syncs to your other devices. Export a backup first if you want to keep a copy."
+                  : "This clears the progress and stories saved in this browser. Export a backup first if you want to keep a copy."}
               </p>
               <button
                 className="button danger"
                 onClick={() => {
                   S({ ...initial });
                   MO(false);
-                  T("Local learning data reset");
+                  T(
+                    learningStore.user
+                      ? "Account progress reset. The change will sync."
+                      : "Browser progress reset",
+                  );
                 }}
               >
-                Reset all local data
+                {learningStore.user
+                  ? "Reset account progress"
+                  : "Reset browser progress"}
               </button>
             </details>
           </section>

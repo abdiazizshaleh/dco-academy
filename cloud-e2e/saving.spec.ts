@@ -184,6 +184,16 @@ test("account loading, autosave, conflict handling, offline cache, and guest iso
       .getByRole("dialog")
       .getByText("Saved to your account", { exact: true }),
   ).toBeVisible();
+  const resetSummary = page
+    .locator("summary")
+    .filter({ hasText: "Reset account progress" });
+  await expect(resetSummary).toBeVisible();
+  await resetSummary.click();
+  await page
+    .getByRole("button", { name: "Reset account progress", exact: true })
+    .click();
+  await expect.poll(() => record.state.stories.length).toBe(0);
+  await page.getByRole("button", { name: "Account and sync" }).click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.getByRole("button", { name: "Close preferences" }).click();
   await expect(
