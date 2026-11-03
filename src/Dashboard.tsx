@@ -61,7 +61,7 @@ export function Dashboard({
           <p className="muted">
             {s.attempts.length
               ? "Pick up a lesson, work through a fault, or review what you missed."
-              : "Prepare for a data center operations interview with lessons, troubleshooting labs, and practice questions."}
+              : "Prepare for an AWS or Google data center technician interview with lessons, troubleshooting labs, and practice questions."}
           </p>
         </div>
         <button
@@ -70,6 +70,19 @@ export function Dashboard({
         >
           <CalendarDays size={17} />
           Study plan
+        </button>
+      </div>
+      <div className="company-home-banner">
+        <div>
+          <span className="pill">AWS / Amazon</span>
+          <span className="pill company-google">Google</span>
+          <p>
+            One technical foundation, with each company’s role and interview
+            context clearly marked.
+          </p>
+        </div>
+        <button className="text-button" onClick={() => go("Career Readiness")}>
+          Compare the roles <ArrowRight size={15} />
         </button>
       </div>
       <div className="home-layout">

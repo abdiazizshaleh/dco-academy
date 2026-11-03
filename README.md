@@ -37,7 +37,7 @@ Tests cover all 15 incident state machines, unsafe/incomplete actions, terminal 
 - STAR editor with all requested core fields, principle coverage, evidence questions, rehearsal starts/timers, and experience prompts.
 - 14-day, 30-day, and 60-session self-paced plans; daily time budget, reference target date, task persistence, and overdue/carry-forward labels.
 - IndexedDB persistence, JSON export/import with structural validation, local reset, bookmarks, lesson notes, dark/light themes, and responsive navigation.
-- 28 research entries and a source-analysis report. Community anecdotes and fictional examples are distinguished from official/vendor documentation.
+- 30 research entries and a source-analysis report. Community anecdotes and fictional examples are distinguished from official/vendor documentation.
 
 ## Scope and limitations
 
@@ -146,3 +146,9 @@ Interface text now distinguishes device saves, pending account saves, errors, an
 Validation: 43 unit tests, 11 learner browser journeys, and two account-saving browser journeys. The walkthrough covers all 14 navigation pages, every lesson, mobile layouts in both themes, recovery after immediate reload, account conflicts/offline work, new-account carryover, final edits during sign-out, and JSON backup round trips.
 
 New-account carryover also recognizes a changed plan start date, theme preference, standalone review/interview records, and per-lab terminal sessions. The plan-start-only case was reproduced and verified through real sign-in using temporary accounts.
+
+## AWS and Google role context
+
+Career Readiness compares the reviewed AWS Data Center Technician posting with Google’s Data Center Technician III, Hardware Operations posting in Cedar Rapids. The Google card links the exact example, current job search, and official candidate preparation page; its qualifications are not presented as universal requirements. Company level labels are not treated as interchangeable.
+
+The dashboard, course modules, lessons, assessments, planner, and practical labs distinguish AWS/Amazon context from shared AWS/Google study material. Amazon Leadership Principles and the existing principle-based behavioral bank remain explicitly Amazon-specific. Technical interview practice is shared. Story principle tags are optional, and Google has a separate saved application checklist under the existing notes snapshot. Existing AWS checklist keys and all progress records are preserved.

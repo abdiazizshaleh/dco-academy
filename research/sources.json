@@ -250,5 +250,23 @@
     "type": "official",
     "verified": "2026-11-03",
     "applicability": "Base UDP datagram semantics. Read the linked updates for extensions; reliability and application behavior remain separate concerns."
+  },
+  {
+    "id": "google-dct",
+    "title": "Google Data Center Technician III, Hardware Operations - Cedar Rapids",
+    "publisher": "Google Careers",
+    "url": "https://www.google.com/about/careers/applications/jobs/results/118500840158700230-data-center-technician-iii-hardware-operations",
+    "type": "official",
+    "verified": "2026-11-03",
+    "applicability": "Example posting for hardware/OS/network diagnosis, deployment, maintenance, media security, and role-specific qualifications. Titles and requirements vary; openings can close."
+  },
+  {
+    "id": "google-interview",
+    "title": "Google Careers - interview preparation",
+    "publisher": "Google Careers",
+    "url": "https://www.google.com/about/careers/applications/how-we-hire/interview-tips",
+    "type": "official",
+    "verified": "2026-11-03",
+    "applicability": "Google\u2019s candidate preparation page. Confirm the format for your actual technician vacancy with the recruiter; Amazon Leadership Principles are Amazon-specific."
   }
 ]

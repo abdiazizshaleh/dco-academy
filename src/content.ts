@@ -39,7 +39,7 @@ const raw: [string, Domain, string, string[], string[][]][] = [
     [
       [
         "DCO, DCEO, and the cloud",
-        "DCO technicians maintain compute, storage, and network hardware. DCEO teams operate electrical and mechanical facilities. A cloud engineer configures services built on that infrastructure. These responsibilities meet at escalation boundaries.",
+        "At AWS, DCO technicians maintain compute, storage, and network hardware. AWS DCEO teams operate electrical and mechanical facilities. A cloud engineer configures services built on that infrastructure. These responsibilities meet at escalation boundaries.",
         "A Region contains multiple isolated Availability Zones; an AZ can contain one or more discrete data centers. A rack is neither a Region nor an AZ. Failure domains limit how far an individual fault spreads.",
         "A server alarm and a building power alarm may appear together. Treating them as two unrelated board failures loses the shared dependency.",
         "Establish affected assets, correlate timestamps, and involve the responsible facilities team for power infrastructure. Use approved procedures for the IT equipment.",
